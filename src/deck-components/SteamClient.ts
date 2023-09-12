@@ -603,8 +603,6 @@ export interface Browser {
     GetBrowserID(): Promise<number>;
 
     GetSteamBrowserID(): Promise<number>; // 16-bit unsigned integer?
-    GoBack: any;
-    GoForward: any;
     HideCursorUntilMouseEvent: any;
 
     InspectElement(param0: any, param1: any): any;
@@ -613,7 +611,6 @@ export interface Browser {
 
     OpenDevTools(): void;
 
-    OpenURLForNavigation: any;
     RegisterForGestureEvents: Unregisterable | any;
     RegisterForOpenNewTab: Unregisterable | any;
     SetShouldExitSteamOnBrowserClosed: any;
@@ -924,6 +921,7 @@ export interface Input {
     // For controller input state changes
     RegisterForControllerStateChanges(callback: (controllerStateChanges: ControllerStateChange[]) => void): Unregisterable | any;
 
+    RegisterForDualSenseUpdateNotification: Unregisterable | any;
     RegisterForGameKeyboardMessages: Unregisterable | any;
     RegisterForRemotePlayConfigChanges: Unregisterable | any;
     RegisterForShowControllerLayoutPreviewMessages: Unregisterable | any;
@@ -1662,26 +1660,20 @@ export interface Settings {
     RequestDeviceAuthInfo: any;
     SelectClientBeta: any;
 
-    SetCefRemoteDebuggingEnabled(value: boolean): any;
-
     // Get from available languages
     SetCurrentLanguage(strShortName: string): void;
 
     SetEnableSoftProcessKill(value: boolean): void; // Default value is false, this is Valve internal menu
-    SetEnableTestUpdaters: any;
 
-    SetForceOOBE(value: boolean): void; // Force OOBE - Forces out of box experience on every device start
     SetHostname: any;
     SetMicTestMode: any;
 
     SetOOBETestMode(value: boolean): void;
 
-    SetOverrideBrowserComposerMode: any;
     SetPreferredMonitor: any;
     SetRegisteredSteamDeck: any;
     SetSaveAccountCredentials: any;
     SetSetting: any;
-    SetShowMobxDevTools: any;
     SetSteamPlayEnabled: any;
 
     SetTimeZone(timezoneId: string): void; // You can get valid timezoneIds from GetAvailableTimeZones()
@@ -1988,7 +1980,8 @@ export interface NetworkDevice {
 export interface Network {
     Device: NetworkDevice;
 
-    ForceRefresh(): Promise<any>; // Returns {"result":1,"message":""}
+    ForceRefresh(): Promise<OperationResponse>;
+
     ForceTestConnectivity(): void;
 
     GetProxyInfo(): Promise<ProxyInfo>;
@@ -2004,9 +1997,11 @@ export interface Network {
 
     SetProxyInfo(mode: number, address: string, port: number, excludeLocal: boolean): void;
 
-    SetWifiEnabled(value: boolean): Promise<any>; // Returns {"result":1,"message":""}
-    StartScanningForNetworks(): Promise<any>; // Returns {"result":1,"message":""}
-    StopScanningForNetworks(): Promise<any>; // Returns {"result":1,"message":""}
+    SetWifiEnabled(value: boolean): Promise<OperationResponse>;
+
+    StartScanningForNetworks(): Promise<OperationResponse>;
+
+    StopScanningForNetworks(): Promise<OperationResponse>;
 }
 
 export interface Perf {
@@ -2017,23 +2012,8 @@ export interface Perf {
 
 export interface Report {
     GenerateSystemReport: any;
+    SaveToDesktop: any;
     Submit: any;
-}
-
-export interface BlockDevice {
-    Format: any;
-    Unmount: any;
-}
-
-export interface Drive {
-    Eject: any;
-}
-
-export interface SystemStorage {
-    BlockDevice: BlockDevice;
-    Drive: Drive;
-    RegisterForStateChanges: Unregisterable | any;
-    TrimAll: any;
 }
 
 export interface SystemUI {
@@ -2056,12 +2036,14 @@ export interface System {
     ExitFakeCaptivePortal: any;
     FactoryReset: any;
     FormatStorage: any;
-    GetLegacyAmpControlEnabled: any;
+
+    GetLegacyAmpControlEnabled(): Promise<any>; // {"bAvailable":true,"bEnabled":false}
     GetOSType: any;
 
     GetSystemInfo(): Promise<SystemInfo>;
 
-    IsDeckFactoryImage: Promise<boolean>;
+    IsDeckFactoryImage(): Promise<boolean>;
+
     Network: Network;
     NotifyGameOverlayStateChanged: any;
     OpenFileDialog: any;
@@ -2072,8 +2054,9 @@ export interface System {
 
     RegisterForAirplaneModeChanges(callback: (airplaneModeChange: AirplaneModeChange) => void): Unregisterable | any;
 
-    RegisterForBatteryStateChanges: Unregisterable | any;
-    RegisterForFormatStorageProgress: Unregisterable | any;
+    RegisterForBatteryStateChanges(callback: (batteryStateChange: BatteryStateChange) => void): Unregisterable | any;
+
+    RegisterForFormatStorageProgress(callback: () => void): Unregisterable | any; // {"flProgress":0,"rtEstimatedCompletionTime":0,"eStage":1}
 
     RegisterForOnResumeFromSuspend(callback: () => void): Unregisterable | any;
 
@@ -2094,7 +2077,6 @@ export interface System {
     ShutdownPC(): any;
 
     SteamRuntimeSystemInfo: any;
-    Storage: SystemStorage;
 
     /**
      * Suspends the system.
@@ -2150,8 +2132,10 @@ export interface URL {
 
 export interface Updates {
     ApplyUpdates: any;
-    CheckForUpdates: any;
-    GetCurrentOSBranch: any;
+
+    CheckForUpdates(): Promise<OperationResponse>; // Checks for software updates
+    GetCurrentOSBranch(): Promise<OSBranch>;
+
     RegisterForUpdateStateChanges: Unregisterable | any;
     SelectOSBranch: any;
 }
@@ -2166,9 +2150,12 @@ export interface User {
     FlipToLogin: any;
     ForceShutdown: any;
     ForgetPassword: any;
-    GetIPCountry: any;
+
+    GetIPCountry(): Promise<string>;
+
     GetLoginProgress: any;
-    GetLoginUsers: any;
+
+    GetLoginUsers(): Promise<LoginUser[]>;
 
     GoOffline(): void;
 
@@ -2202,7 +2189,10 @@ export interface User {
     RemoveUser: any;
     RequestSupportSystemReport: any;
     ResumeSuspendedGames: any;
-    RunSurvey: any;
+
+    // Hardware survey information
+    RunSurvey(callback: (surveySections: SurveySection[]) => void): void;
+
     SendSurvey: any;
     SetAsyncNotificationEnabled: any;
     SetLoginCredentials: any;
@@ -2230,7 +2220,6 @@ export interface WebChat {
     GetPushToTalkEnabled: any;
     GetSignIntoFriendsOnStart: any;
     GetUIMode: any;
-    GetWebChatLanguage: any;
     OnGroupChatUserStateChange: any;
     OpenURLInClient: any;
     RegisterForComputerActiveStateChange: Unregisterable | any;
@@ -3581,6 +3570,37 @@ export interface AudioDeviceInfo {
      * An array of audio devices.
      */
     vecDevices: Device[];
+}
+
+export interface BatteryStateChange {
+    bHasBattery: boolean;
+    eACState: number; // 1 unplugged, 2 - plugged in normal, 3 - plugged in with slow charger
+    eBatteryState: number; // 1 - Using battery, 2 - Not using battery? 3 - hybrid?
+    flLevel: number; // Battery Percentage in floating point 0-1
+    nSecondsRemaining: number; // Appears to be charge time remaining or time remaining on battery
+    bShutdownRequested: boolean;
+}
+
+export interface OSBranch {
+    eBranch: number; // 1 - Stable
+    sRawName: string;
+}
+
+export interface LoginUser {
+    personaName: string;
+    accountName: string;
+    rememberPassword: boolean;
+    avatarUrl: string;
+}
+
+export interface SurveyEntry {
+    strName: string;
+    vecArgs: string[];
+}
+
+export interface SurveySection {
+    strSectionName: string;
+    vecEntries: SurveyEntry[];
 }
 
 
