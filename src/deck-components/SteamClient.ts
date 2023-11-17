@@ -572,13 +572,6 @@ export interface Apps {
     ToggleAppSteamCloudSyncOnSuspendEnabled: any;
 
     /**
-     * Toggles the "Use Desktop Game Theatre while SteamVR is active" setting for a specific application.
-     * @param {number} appId - The ID of the application.
-     * @returns {void}
-     */
-    ToggleEnableDesktopTheatreForApp(appId: number): void;
-
-    /**
      * Toggles the Steam Overlay setting for a specific application.
      * @param {number} appId - The ID of the application.
      * @returns {void}
@@ -1015,6 +1008,8 @@ export interface Input {
      */
     GetControllerMappingString(unControllerIndex: number): Promise<string>;
 
+    GetControllerPreviouslySeen: any;
+
     GetSteamControllerDongleState(): Promise<boolean>;
     GetTouchMenuIconsForApp(param0: any): Promise<any>;// param0 - app?
     GetXboxDriverInstallState(): Promise<any>;
@@ -1440,6 +1435,7 @@ export interface Notifications {
 
 export interface VRDevice {
     BIsConnected: any;
+    BVRDeviceSeenRecently: any;
     RegisterForDeviceConnectivityChange: Unregisterable | any;
 }
 
@@ -1495,7 +1491,6 @@ export interface OpenVR {
     RegisterForInstallDialog: Unregisterable | any;
     RegisterStartupErrors: Unregisterable | any;
     RegisterForVRHardwareDetected: Unregisterable | any;
-    RegisterForVRModeChange: Unregisterable | any;
     SetOverlayInteractionAffordance: any;
     ShowNotification: any;
     StartVR: any;
