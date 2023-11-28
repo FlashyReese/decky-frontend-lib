@@ -32,10 +32,10 @@ export interface Apps {
     /**
      * Opens the screenshot folder for a specific app.
      * @param {string} appId - The ID of the app to browse screenshots for.
-     * @param {number} param1 - Additional parameter (exact usage may vary).
+     * @param {number} handle - The screenshot handle to use.
      * @returns {void}
      */
-    BrowseScreenshotForApp(appId: string, param1: number): void;
+    BrowseScreenshotForApp(appId: string, handle: number): void;
 
     /**
      * Opens the screenshot folder for a specific app.
@@ -101,7 +101,14 @@ export interface Apps {
      */
     CreateDesktopShortcutForApp(appId: number): void;
 
-    DownloadWorkshopItem: any;
+    /**
+     * Download a workshop item.
+     * @param {number} appId - The ID of the application.
+     * @param {string} itemId - The ID of the workshop item.
+     * @param {boolean} param1 - Additional parameter (exact usage may vary).
+     * @returns {void}
+     */
+    DownloadWorkshopItem(appId: number, itemId: string, param1: boolean): void;
 
     /**
      * Retrieves achievements within a specified time range for a given app.
@@ -129,13 +136,19 @@ export interface Apps {
      * Represents a function to retrieve the name of the application in a backup folder.
      * @param {string} appBackupPath - The path to the application's backup folder.
      * @returns {Promise<string | undefined>} - A Promise that resolves to the name of the application in the backup folder, or undefined if the path is invalid.
+     * @remarks This function checks for the "sku.sis" file in that path.
      */
     GetBackupsInFolder(appBackupPath: string): Promise<string | undefined>;
 
+    /**
+     * @param appId - The ID of the application.
+     * @returns {Promise<string>} - A Promise that resolves to a stringified object.
+     */
     GetCachedAppDetails(appId: number): Promise<string>; // todo: Parsing nightmare
 
-    GetCloudPendingRemoteOperations: any;
-    GetConflictingFileTimestamps: any;
+    GetCloudPendingRemoteOperations(appId: number): Promise<any>;
+
+    GetConflictingFileTimestamps(appId: number): Promise<ConflictingFileTimestamp>;
 
     /**
      * Retrieves details for a specific screenshot upload.
@@ -179,7 +192,14 @@ export interface Apps {
 
     GetGameActionDetails(appId: number, callback: (gameAction: GameAction) => void): void;
 
-    GetGameActionForApp(appId: string, callback: (param0: number /*flag check? for validity*/, param1: number | string /* string appears to be just the appid*/, param2: string /* "LaunchApp", need to look for more to document*/) => void): void;
+    GetGameActionForApp(
+        appId: string,
+        callback: (
+            param0: number /*flag check? for validity*/,
+            appId: number | string,
+            param2: string /* "LaunchApp", need to look for more to document*/,
+        ) => void,
+    ): void;
 
     /**
      * Retrieves launch options for a specified application.
@@ -190,7 +210,10 @@ export interface Apps {
      */
     GetLaunchOptionsForApp(appId: number): Promise<LaunchOption[]>;
 
-    GetLibraryBootstrapData: any; // CLibraryBootstrapData - binary deserializer???
+    /**
+     * @todo Returns an empty ArrayBuffer?
+     */
+    GetLibraryBootstrapData(): Promise<ArrayBuffer>; // CLibraryBootstrapData - binary deserializer???
 
     /**
      * Retrieves achievement information for the authenticated user in a specific Steam application.
@@ -248,12 +271,14 @@ export interface Apps {
 
     /**
      * Represents a function to retrieve details about a soundtrack associated with a soundtrack application.
+     * The soundtrack has to be installed.
      * @param {number} appId - The ID of the soundtrack application.
      * @returns {Promise<SoundtrackDetails>} - A Promise that resolves to the details of the soundtrack associated with the specified soundtrack application.
      */
     GetSoundtrackDetails(appId: number): Promise<SoundtrackDetails>;
 
-    GetStoreTagLocalization(tags: number[]): Promise<any>;
+    // [...appStore.m_mapStoreTagLocalization.keys()]
+    GetStoreTagLocalization(tags: number[]): Promise<StoreTagLocalization[]>;
 
     /**
      * Retrieves a list of subscribed workshop items for a specific application.
@@ -262,9 +287,10 @@ export interface Apps {
      */
     GetSubscribedWorkshopItems(appId: number): Promise<WorkshopItem[]>;
 
-    InstallFlatpakAppAndCreateShortcut(param0: string, param1: string): Promise<any>; // returns {"appid":0,"strInstallOutput":""}
-    JoinAppContentBeta: any;
-    JoinAppContentBetaByPassword: any;
+    InstallFlatpakAppAndCreateShortcut(appName: string, appCommandLineOptions: string): Promise<any>; // returns {"appid":0,"strInstallOutput":""}
+    JoinAppContentBeta(appId: number, param1: any): any;
+
+    JoinAppContentBetaByPassword(appId: number, param1: any): any;
 
     ListFlatpakApps(): Promise<any>;
 
@@ -275,13 +301,20 @@ export interface Apps {
     /**
      * Opens the settings dialog for a specific application.
      * @param {number} appId - The ID of the application for which to open the settings dialog.
-     * @param {string} param1 - Additional parameter (exact usage may vary).
+     * @param {string} section - The section (tab) to switch to.
      * @returns {void}
      */
-    OpenAppSettingsDialog(appId: number, param1: string): void;
+    OpenAppSettingsDialog(appId: number, section: string): void;
 
     PromptToChangeShortcut(): Promise<any>; // todo: unknown, prompts file picker
-    RaiseWindowForGame(appId: number): any; // ResumeGameInProgress
+
+    /**
+     * Raises the window for a given application.
+     * @param {string} appId - The ID of the application to raise the window of.
+     * @returns {Promise<number>} - A Promise that resolves to a number.
+     * @todo Returns a result enum? 1 if ok, 2 if not running
+     */
+    RaiseWindowForGame(appId: number): Promise<number>; // ResumeGameInProgress
 
     /**
      * Registers a callback function to be called when achievement changes occur.
@@ -300,9 +333,15 @@ export interface Apps {
      */
     RegisterForAppDetails(appId: number, callback: (appDetails: AppDetails) => void): Unregisterable | any;
 
-    RegisterForAppOverviewChanges: Unregisterable | any; // CAppOverview_Change - binary deserializer???
+    /**
+     * @todo Calls the callback on launching a game
+     * @todo Doesn't return anything?
+     */
+    RegisterForAppOverviewChanges(callback: (data: ArrayBuffer) => void): Unregisterable | any; // CAppOverview_Change - binary deserializer???
 
-    RegisterForDRMFailureResponse(callback: (appid: number, eResult: number, errorCode: number) => void): Unregisterable | any;
+    RegisterForDRMFailureResponse(
+        callback: (appid: number, eResult: number, errorCode: number) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when a game action ends.
@@ -325,23 +364,41 @@ export interface Apps {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForGameActionStart(callback: (gameActionIdentifier: number, appId: string, action: string, param3: number) => void): Unregisterable | any;
+    RegisterForGameActionStart(
+        callback: (gameActionIdentifier: number, appId: string, action: string, param3: number) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when a game action task changes.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForGameActionTaskChange(callback: (gameActionIdentifier: number, appId: string, action: string, requestedAction: string, param4: string) => void): Unregisterable | any;
+    RegisterForGameActionTaskChange(
+        callback: (
+            gameActionIdentifier: number,
+            appId: string,
+            action: string,
+            requestedAction: string,
+            param4: string,
+        ) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when a user requests a game action.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForGameActionUserRequest(callback: (gameActionIdentifier: number, appId: string, action: string, requestedAction: string, appId2: string) => void): Unregisterable | any;
+    RegisterForGameActionUserRequest(
+        callback: (
+            gameActionIdentifier: number,
+            appId: string,
+            action: string,
+            requestedAction: string,
+            appId2: string,
+        ) => void,
+    ): Unregisterable | any;
 
-    RegisterForLocalizationChanges: Unregisterable | any;
+    RegisterForLocalizationChanges(callback: (param0: ArrayBuffer) => void): Unregisterable | any;
 
     RegisterForPrePurchasedAppChanges(callback: () => void): Unregisterable | any; // Unknown, did have it show up a few times, but not callback parameters
     RegisterForShowMarketingMessageDialog: Unregisterable | any;
@@ -353,7 +410,10 @@ export interface Apps {
      */
     RegisterForWorkshopChanges(callback: (appId: number) => void): Unregisterable | any;
 
-    RegisterForWorkshopItemDownloads(param0: number, callback: () => void): Unregisterable | any;
+    RegisterForWorkshopItemDownloads(
+        appId: number,
+        callback: (appId: number, publishedFileId: string, param2: number) => void,
+    ): Unregisterable | any;
 
     /**
      * Removes a non-Steam application shortcut from the Steam library.
@@ -372,27 +432,44 @@ export interface Apps {
     RemoveUserTagFromApps(appIds: number[], userTag: string): void;
 
     ReportLibraryAssetCacheMiss(appId: number, assetType: AppArtworkAssetType): void;
-    ReportMarketingMessageDialogShown: any;
-    RequestIconDataForApp: any;
-    RequestLegacyCDKeysForApp: any;
-    ResetHiddenState: any;
+
+    ReportMarketingMessageDialogShown(): void;
+
+    RequestIconDataForApp(appId: number): any;
+
+    RequestLegacyCDKeysForApp(appId: number): any;
+
+    // collectionStore.GetCollection('hidden').allApps.map(e => e.appid)
+    // May be broken?
+    ResetHiddenState(appIds: number[]): Promise<void>;
 
     /**
      * Runs a game with specified parameters.
      * @param {string} appId - The ID of the application to run.
-     * @param {string} param1 - Additional parameter (exact usage may vary).
+     * @param {string} launchOptions - Additional launch options for the application.
      * @param {number} param2 - Additional parameter (exact usage may vary).
-     * @param {number} param3 - Additional parameter (exact usage may vary).
-     * @returns {any}
+     * @param {AppLaunchSource} launchSource
+     * @remarks `launchOptions` is appended before the ones specified in the application's settings.
+     * @returns {void}
      */
-    RunGame(appId: string, param1: string, param2: number, param3: number): any;
+    RunGame(appId: string, launchOptions: string, param2: number, param3: AppLaunchSource): void;
 
-    SaveAchievementProgressCache: any;
+    /*
+      function u(e, t) {
+        return t instanceof Map || t instanceof Set ? Array.from(t) : t;
+      }
+      SteamClient.Apps.SaveAchievementProgressCache(
+        JSON.stringify(this.m_achievementProgress, u)
+      );
+    */
+    SaveAchievementProgressCache(progress: string): any;
 
     /**
      * Scans the system for installed non-Steam applications.
      * @returns {Promise<NonSteamApp[]>} A Promise that resolves to an array of NonSteamApp objects representing installed non-Steam applications.
      * @remarks This function scans the user's system for installed applications that are not part of the Steam library. It does not scan for shortcuts added to the Steam library.
+     *
+     * On Linux, it scans inside /usr/share/applications and $XDG_DATA_HOME/applications.
      */
     ScanForInstalledNonSteamApps(): Promise<NonSteamApp[]>;
 
@@ -447,7 +524,8 @@ export interface Apps {
      */
     SetAppResolutionOverride(appId: number, resolution: string): any;
 
-    SetCachedAppDetails: any;
+    SetCachedAppDetails(appId: number, details: string): any;
+
     SetControllerRumblePreference(appId: number, param1: number): any; // param1 - enum for preference
 
     /**
@@ -458,15 +536,41 @@ export interface Apps {
      * @param {AppArtworkAssetType} assetType - The type of artwork to set.
      * @returns {Promise<any>} A Promise that resolves after the custom artwork is set.
      */
-    SetCustomArtworkForApp(appId: number, base64Image: string, imageType: string, assetType: AppArtworkAssetType): Promise<any>;
+    SetCustomArtworkForApp(
+        appId: number,
+        base64Image: string,
+        imageType: string,
+        assetType: AppArtworkAssetType,
+    ): Promise<any>;
 
-    SetCustomLogoPositionForApp(appId: number, param1: string): Promise<void>; // I've tried sending escaped LogoPosition JSON, but it doesn't seem to work
+    SetCustomLogoPositionForApp(appId: number, details: string): Promise<void>; // I've tried sending escaped LogoPosition JSON, but it doesn't seem to work
 
     SetDLCEnabled(appId: number, appDLCId: number, value: boolean): void;
 
-    SetLocalScreenshotCaption(appId: string, param1: any, param2: any): void;
-    SetLocalScreenshotPrivacy(appId: string, param1: any, param2: any): void;
-    SetLocalScreenshotSpoiler(appId: string, param1: any, param2: any): void;
+    /**
+     * Set a local screenshot's caption.
+     * @param {string} appId - The application ID the screenshot belongs to.
+     * @param {number} hHandle - The handle of the screenshot.
+     * @param {string} caption
+     * @returns {void}
+     */
+    SetLocalScreenshotCaption(appId: string, hHandle: any, caption: string): void;
+
+    /**
+     * Set a local screenshot's privacy state.
+     * @param {string} appId - The application ID the screenshot belongs to.
+     * @param {number} hHandle - The handle of the screenshot.
+     * @param {FilePrivacyState} privacy - Screenshot privacy state.
+     */
+    SetLocalScreenshotPrivacy(appId: string, hHandle: any, privacy: FilePrivacyState): void;
+
+    /**
+     * Set a local screenshot's spoiler state.
+     * @param {string} appId - The application ID the screenshot belongs to.
+     * @param {number} hHandle - The handle of the screenshot.
+     * @param {boolean} spoilered - Is the screenshot spoilered?
+     */
+    SetLocalScreenshotSpoiler(appId: string, hHandle: any, spoilered: boolean): void;
 
     /**
      * Sets the icon for a non-Steam application shortcut.
@@ -558,8 +662,10 @@ export interface Apps {
      */
     TerminateApp(appId: string, param1: boolean): void;
 
-    ToggleAllowDesktopConfiguration: any;
-    ToggleAppFamilyBlockedState: any;
+    // "#AppProperties_SteamInputDesktopConfigInLauncher"
+    ToggleAllowDesktopConfiguration(appId: number): any;
+
+    ToggleAppFamilyBlockedState(appId: number): any;
 
     /**
      * Toggles the Steam Cloud synchronization for game saves for a specific application.
@@ -569,7 +675,8 @@ export interface Apps {
      */
     ToggleAppSteamCloudEnabled(appId: number): void;
 
-    ToggleAppSteamCloudSyncOnSuspendEnabled: any;
+    // "#AppProperties_EnableSteamCloudSyncOnSuspend"
+    ToggleAppSteamCloudSyncOnSuspendEnabled(appId: number): any;
 
     /**
      * Toggles the Steam Overlay setting for a specific application.
@@ -578,8 +685,10 @@ export interface Apps {
      */
     ToggleEnableSteamOverlayForApp(appId: number): void;
 
-    ToggleOverrideResolutionForInternalDisplay: any;
-    UninstallFlatpakApp: any;
+    // "#AppProperties_ResolutionOverride_Internal"
+    ToggleOverrideResolutionForInternalDisplay(appId: number): any;
+
+    UninstallFlatpakApp(app: string): Promise<boolean>;
 
     /**
      * Verifies the integrity of an app's files.
@@ -599,8 +708,10 @@ export interface Auth {
 
     IsSecureComputer(): Promise<boolean>;
 
-    SetLoginToken: any;
-    SetSteamGuardData: any;
+    SetLoginToken(refreshToken: string, accountName: string): any;
+
+    SetSteamGuardData(accountName: string, newGuardData: string): any;
+
     StartSignInFromCache(param0: any, login: string): Promise<any>;
 }
 
@@ -632,7 +743,9 @@ export interface Broadcast {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForViewerRequests(callback: (viewerFriendCode: number, param1: number, param2: number) => void): Unregisterable | any;
+    RegisterForViewerRequests(
+        callback: (viewerFriendCode: number, param1: number, param2: number) => void,
+    ): Unregisterable | any;
 
     /**
      * Rejects a viewer request for the broadcast.
@@ -652,59 +765,85 @@ export interface Browser {
     BIsDirectHWNDBrowser: any;
     BIsPopupWindow: any;
     BIsVROverlayBrowser: any;
-    ClearAllBrowsingData: any;
-    ClearHistory: any;
+
+    ClearAllBrowsingData(): void;
+
+    ClearHistory(): void;
 
     CloseDevTools(): void;
 
     GetBrowserID(): Promise<number>;
 
     GetSteamBrowserID(): Promise<number>; // 16-bit unsigned integer?
-    HideCursorUntilMouseEvent(): any;
 
-    InspectElement(clientY: any, clientX: any): any; // yup that's right, clientY and clientX are reversed
+    /**
+     * Hides the mouse cursor until input.
+     * @returns {void}
+     */
+    HideCursorUntilMouseEvent(): void;
 
-    NotifyUserActivation: any;
+    InspectElement(clientY: number, clientX: number): void; // yup that's right, clientY and clientX are reversed
+
+    NotifyUserActivation(): void;
 
     OpenDevTools(): void;
 
-    RegisterForGestureEvents: Unregisterable | any;
+    /**
+     * @todo unconfirmed
+     */
+    RegisterForGestureEvents(callback: (gesture: TouchGesture) => void): Unregisterable | any;
+
     RegisterForOpenNewTab: Unregisterable | any;
-    SetShouldExitSteamOnBrowserClosed: any;
-    SetTouchGesturesToCancel: any;
-    StartDownload: any;
+
+    SetShouldExitSteamOnBrowserClosed(value: boolean): any;
+
+    SetTouchGesturesToCancel(gestures: TouchGestureType[]): void;
+
+    /**
+     * Prompts and downloads a file.
+     * @param {string} url - The URL of the file to download.
+     * @returns {void}
+     */
+    StartDownload(url: string): void;
 }
 
 export interface BrowserView {
-    /*
-    param0 - {
-            parentPopupBrowserID: e.SteamClient.Browser.GetBrowserID(),
-            strUserAgentIdentifier: i,
-            strVROverlayKey: a,
-            strInitialURL: r,
-            bOnlyAllowTrustedPopups: o
-        }
-     */
-    Create(param0: any): any;
-    CreatePopup: any;
-    Destroy(param0: any): any;
-    PostMessageToParent: any;
+    Create(browser: BrowserViewInit | undefined): BrowserViewPopup;
+
+    CreatePopup(browser: BrowserViewInit | undefined): {
+        strCreateURL: string;
+        browserView: BrowserViewPopup;
+    };
+
+    Destroy(browser: BrowserViewInit): void;
+
+    PostMessageToParent(message: string, args: string): void;
 }
 
 export interface ClientNotifications {
-    DisplayClientNotification: any;
+    /**
+     * Displays a Steam notification.
+     * @param {ClientUINotification} notification - Notification type.
+     * @param {string} options - Stringified object of `NotificationOptions`.
+     * @param {function} callback
+     */
+    DisplayClientNotification(notification: ClientUINotification, options: string, callback: any): void;
+
     OnRespondToClientNotification: any;
 }
 
 export interface Cloud {
-    ResolveAppSyncConflict: any;
-    RetryAppSync: any;
+    ResolveAppSyncConflict(appId: number, keepLocal: boolean): any;
+
+    RetryAppSync(appId: number): any;
 }
 
 export interface CommunityItems {
-    DownloadItemAsset: any;
-    GetItemAssetPath: any;
-    RemoveDownloadedItemAsset: any;
+    DownloadItemAsset(communityItemId: string, param1: any, param2: string): any;
+
+    GetItemAssetPath(communityItemId: string, param1: any, param2: string): any;
+
+    RemoveDownloadedItemAsset(communityItemId: string, param1: any, param2: string): any;
 }
 
 /**
@@ -734,8 +873,10 @@ export interface Console {
 }
 
 export interface Customization {
-    GenerateLocalStartupMoviesThumbnails: any;
-    GetDownloadedStartupMovies(param0: any): Promise<any>;
+    GenerateLocalStartupMoviesThumbnails(param0: number): Promise<any>;
+
+    GetDownloadedStartupMovies(param0: string): Promise<any>;
+
     GetLocalStartupMovies(): Promise<any>;
 }
 
@@ -777,7 +918,9 @@ export interface Downloads {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForDownloadItems(callback: (isDownloading: boolean, downloadItems: DownloadItem[]) => void): Unregisterable | any;
+    RegisterForDownloadItems(
+        callback: (isDownloading: boolean, downloadItems: DownloadItem[]) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when download overview changes.
@@ -850,8 +993,10 @@ export interface FamilySharing {
 
     RegisterForKickedBorrower: any;
 
-    RequestLocalDeviceAuthorization(param0: string): Promise<number>; // Unknown param0, my assumption is probably a steam64Id of the user sharing the library
-    UpdateAuthorizedBorrower(param0: number, param1: boolean): Promise<number>; // Unknown
+    RequestLocalDeviceAuthorization(steam64Id: string): Promise<number>;
+
+    // param0 - account id?
+    UpdateAuthorizedBorrower(param0: number, param1: boolean): Promise<number>;
 }
 
 export interface Features {
@@ -876,7 +1021,7 @@ export interface FriendSettings {
      */
     RegisterForSettingsChanges(callback: (settingsChanges: string) => void): Unregisterable | any;
 
-    SetFriendSettings: any;
+    SetFriendSettings(details: string): any; // stringified object
 }
 
 /**
@@ -897,10 +1042,11 @@ export interface Friends {
      * Invites a user to a specific game.
      * @param {string} steamId - The Steam ID of the user to invite.
      * @param {number} appId - The ID of the game to invite the user to.
-     * @param {string} param2 - Additional parameters for the invitation.
+     * @param {string} connectString - Additional parameters for the invitation.
      * @returns {Promise<boolean>} A Promise that resolves to true if the user was invited successfully, false otherwise.
      */
-    InviteUserToGame(steamId: string, appId: number, param2: string): Promise<boolean>;
+    InviteUserToGame(steamId: string, appId: number, connectString: string): Promise<boolean>;
+
     InviteUserToLobby: any;
     InviteUserToRemotePlayTogetherCurrentGame: any;
     RegisterForVoiceChatStatus: any;
@@ -915,6 +1061,7 @@ export interface Friends {
 
 export interface GameNotes {
     DeleteImage(param0: any): any;
+
     DeleteNotes: any;
     /*
         FilenameForNotes(e) {
@@ -927,15 +1074,19 @@ export interface GameNotes {
     // {"result":1,"notes":"<escaped json>"}
     // <escaped json> example: {"notes":[{"id":"lmuudzqn","appid":1716740,"ordinal":0,"time_created":1695401684,"time_modified":1695403395,"title":"Old Earth Cuisine 1:","content":"[h1]Old Earth Cuisine 1:[/h1][list][*][p]Red Meat[/p][/*][/list][h1]Beverage Development 2:[/h1][list][*][p]Tranquilitea Sunray[/p][/*][/list][p][/p]"}]}
     GetNotes(filenameForNotes: string, directoryForNoteImages: string): Promise<any>;
+
     GetNotesMetadata: any;
     GetNumNotes: any;
     GetQuota: any;
 
     IterateNotes(appId: number, length: number): any; // Results array of {"result":1,"filename":"","filesize":0,"timestamp":0}
     ResolveSyncConflicts: any;
+
     SaveNotes(filenameForNotes: string, param1: string): Promise<any>; // param1 - notes like escaped json in GetNotes
     SyncToClient(): Promise<any>;
+
     SyncToServer(): Promise<any>;
+
     UploadImage: any;
 }
 
@@ -948,21 +1099,27 @@ export interface GameSessions {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForAchievementNotification(callback: (achievementNotification: AchievementNotification) => void): Unregisterable | any;
+    RegisterForAchievementNotification(
+        callback: (achievementNotification: AchievementNotification) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when an app lifetime notification is received.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForAppLifetimeNotifications(callback: (appLifetimeNotification: AppLifetimeNotification) => void): Unregisterable | any;
+    RegisterForAppLifetimeNotifications(
+        callback: (appLifetimeNotification: AppLifetimeNotification) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when a screenshot notification is received.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForScreenshotNotification(callback: (screenshotNotification: ScreenshotNotification) => void): Unregisterable | any;
+    RegisterForScreenshotNotification(
+        callback: (screenshotNotification: ScreenshotNotification) => void,
+    ): Unregisterable | any;
 }
 
 /**
@@ -984,16 +1141,44 @@ export interface Input {
     CalibrateControllerIMU(param0: any): any; // param0 - m_controllerStateDeviceIdx
     CalibrateControllerJoystick(param0: any): any; // param0 - m_controllerStateDeviceIdx
     CalibrateControllerTrackpads(param0: any): any; // param0 - m_controllerStateDeviceIdx
-    CancelGyroSWCalibration: any;
-    ClearSelectedConfigForApp(param0: any, param1: any): any; // param0 - appid, param1 - controllerIndex
+    CancelGyroSWCalibration(): any;
+
+    ClearSelectedConfigForApp(appId: number, controllerIndex: number): any;
+
     CloseDesktopConfigurator: any;
-    ControllerKeyboardSendText(key: any): any; //???
-    ControllerKeyboardSetKeyState(key: number, state: boolean): any;
+
+    /**
+     * Writes text.
+     * @param {string} textToWrite - The text to write.
+     * @returns {void}
+     */
+    ControllerKeyboardSendText(textToWrite: string): void;
+
+    /**
+     * Sets a specified key's pressed state.
+     * @param {number} keyIndex - The key index to set the state for.
+     * @param {boolean} state - true for pressed, false otherwise.
+     * @returns {void}
+     * @example
+     * Send paste command:
+     * ```
+     * SteamClient.Input.ControllerKeyboardSetKeyState(103, true);
+     * SteamClient.Input.ControllerKeyboardSetKeyState(25, true);
+     * SteamClient.Input.ControllerKeyboardSetKeyState(25, false);
+     * SteamClient.Input.ControllerKeyboardSetKeyState(103, false);
+     * ```
+     */
+    ControllerKeyboardSetKeyState(keyIndex: number, state: boolean): void;
+
     DeauthorizeControllerAccount: any;
-    DecrementCloudedControllerConfigsCounter: any;
+
+    DecrementCloudedControllerConfigsCounter(): any;
+
     DeletePersonalControllerConfiguration: any;
     DuplicateControllerConfigurationSourceMode: any;
+
     EndControllerDeviceSupportFlow(): any;
+
     ExportCurrentControllerConfiguration: any;
     ForceConfiguratorFocus: any;
     ForceSimpleHapticEvent: any;
@@ -1011,31 +1196,47 @@ export interface Input {
     GetControllerPreviouslySeen: any;
 
     GetSteamControllerDongleState(): Promise<boolean>;
-    GetTouchMenuIconsForApp(param0: any): Promise<any>;// param0 - app?
-    GetXboxDriverInstallState(): Promise<any>;
-    IdentifyController: any;
-    InitControllerSounds: any;
+
+    GetTouchMenuIconsForApp(appId: number): Promise<any>;
+
+    GetXboxDriverInstallState(): Promise<any>; // "{"nResult":0}"
+    IdentifyController(controllerIndex: number): any;
+
+    InitControllerSounds(): any;
+
     InitializeControllerPersonalizationSettings: any;
+
     ModalKeyboardDismissed(): void;
+
     OpenDesktopConfigurator: any;
-    PreviewConfiguForAppAndController: any;
+
+    PreviewConfiguForAppAndController(appId: number): any;
+
     PreviewControllerLEDColor(flHue: number, flSaturation: number, flBrightness: number): any;
-    QueryControllerConfigsForApp: any;
+
+    QueryControllerConfigsForApp(appId: number): any;
+
     RegisterForActiveControllerChanges: Unregisterable | any; // {"nActiveController":0}
     RegisterForConfigSelectionChanges(callback: (param0: number, param1: number) => void): Unregisterable | any;
 
     RegisterForControllerAccountChanges: Unregisterable | any;
 
-    RegisterForControllerAnalogInputMessages(callback: (controllerAnalogInputMessages: ControllerAnalogInputMessage[]) => void): Unregisterable | any;
+    RegisterForControllerAnalogInputMessages(
+        callback: (controllerAnalogInputMessages: ControllerAnalogInputMessage[]) => void,
+    ): Unregisterable | any;
 
-    RegisterForControllerCommandMessages(callback: (controllerCommandMessage: ControllerCommandMessage) => void): Unregisterable | any;
+    RegisterForControllerCommandMessages(
+        callback: (controllerCommandMessage: ControllerCommandMessage) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback for changes in controller configuration cloud state.
      * @param {(controllerConfigCloudStateChange: ControllerConfigCloudStateChange) => void} callback - The callback function for config cloud state changes.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForControllerConfigCloudStateChanges(callback: (controllerConfigCloudStateChange: ControllerConfigCloudStateChange) => void): Unregisterable | any;
+    RegisterForControllerConfigCloudStateChanges(
+        callback: (controllerConfigCloudStateChange: ControllerConfigCloudStateChange) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback for receiving controller configuration info messages (controller layouts query, personal controller layout query).
@@ -1043,15 +1244,20 @@ export interface Input {
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      * @remarks Do Not Use, this will break the controller layout selection unless you know what you are doing.
      */
-    RegisterForControllerConfigInfoMessages(callback: (controllerConfigInfoMessages: ControllerConfigInfoMessageList[] | ControllerConfigInfoMessageQuery[]) => void): Unregisterable | any;
+    RegisterForControllerConfigInfoMessages(
+        callback: (
+            controllerConfigInfoMessages: ControllerConfigInfoMessageList[] | ControllerConfigInfoMessageQuery[],
+        ) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be invoked when controller input messages are received.
      * @param {(controllerInputMessages: ControllerInputMessage[]) => void} callback - The callback function to be invoked when controller input messages are received.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForControllerInputMessages(callback: (controllerInputMessages: ControllerInputMessage[]) => void): Unregisterable | any;
-
+    RegisterForControllerInputMessages(
+        callback: (controllerInputMessages: ControllerInputMessage[]) => void,
+    ): Unregisterable | any;
 
     RegisterForControllerListChanges(callback: (controllerListChanges: ControllerInfo[]) => void): Unregisterable | any;
 
@@ -1060,7 +1266,9 @@ export interface Input {
      * @param {(controllerStateChanges: ControllerStateChange[]) => void} callback - The callback function for controller state changes.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForControllerStateChanges(callback: (controllerStateChanges: ControllerStateChange[]) => void): Unregisterable | any;
+    RegisterForControllerStateChanges(
+        callback: (controllerStateChanges: ControllerStateChange[]) => void,
+    ): Unregisterable | any;
 
     RegisterForDualSenseUpdateNotification: Unregisterable | any;
 
@@ -1084,24 +1292,35 @@ export interface Input {
     RegisterForUserKeyboardMessages: Unregisterable | any;
     RequestGyroActive: any;
     RequestRemotePlayControllerConfigs: any;
+
     ResetControllerBindings(param0: any): any;
+
     ResolveCloudedControllerConfigConflict: any;
-    RestoreControllerPersonalizationSettings: any;
+
+    RestoreControllerPersonalizationSettings(controllerIndex: number): any;
+
     SaveControllerCalibration: any;
     SaveControllerPersonalizationSettings: any;
     SaveControllerSounds: any;
-    SaveEditingControllerConfiguration: any;
+
+    SaveEditingControllerConfiguration(controllerIndex: number, sharedConfig: boolean): any;
+
     SetActiveControllerAccount: any;
     SetControllerConfigurationModeShiftBinding: any;
     SetControllerHapticSetting: any;
+
     SetControllerMappingString(mapping: string): void;
+
     SetControllerName: any;
     SetControllerNintendoLayoutSetting: any;
     SetControllerPersonalizationName: any;
+
     //param0 - nLStickDeadzone, bSWAntiDrift, nRHapticStrength, flRPadPressureCurve
     SetControllerPersonalizationSetting(param0: string, param1: number): any;
+
     //param0 - flGyroStationaryTolerance, flAccelerometerStationaryTolerance
     SetControllerPersonalizationSettingFloat(param0: string, param1: number): any;
+
     SetControllerRumbleSetting: any;
     SetCursorActionset: any;
     SetEditingControllerConfigurationActionSet: any;
@@ -1110,15 +1329,27 @@ export interface Input {
     SetEditingControllerConfigurationInputBinding: any;
     SetEditingControllerConfigurationMiscSetting: any;
     SetEditingControllerConfigurationSourceMode: any;
+
     SetGamepadKeyboardText(param0: boolean, param1: string): any;
+
     SetKeyboardActionset(param0: boolean): any;
 
-    SetMousePosition: any;
+    /**
+     * Sets the mouse position.
+     * @param {number} pid - 0
+     * @param {number} x - Mouse X position.
+     * @param {number} y - Mouse Y position.
+     * @returns {void}
+     */
+    SetMousePosition(pid: number, x: number, y: number): void;
 
-    SetSelectedConfigForApp: any;
+    SetSelectedConfigForApp(): any;
+
     SetSteamControllerDonglePairingMode: any;
+
     SetVirtualMenuKeySelected(unControllerIndex: number, unMenuIndex: number, param2: number): any; //
     SetWebBrowserActionset: any;
+
     SetXboxDriverInstallState(param0: any): any; // state
 
     /**
@@ -1128,19 +1359,34 @@ export interface Input {
      */
     ShowControllerSettings(): void;
 
-    StandaloneKeyboardDismissed: any;
+    StandaloneKeyboardDismissed(): any;
+
     StartControllerDeviceSupportFlow(param0: any, param1: any, callback: (param2: any) => void): any;
+
     StartEditingControllerConfigurationForAppIDAndControllerIndex: any;
     StartGyroSWCalibration: any;
     StopEditingControllerConfiguration: any;
     SwapControllerModeInputBindings: any;
     SwapControllerOrder: any;
-    SyncCloudedControllerConfigs: any;
-    TriggerHapticPulse: any;
-    TriggerSimpleHapticEvent: any;
+
+    SyncCloudedControllerConfigs(): any;
+
+    // type - enum
+    TriggerHapticPulse(controllerIndex: number, type: number, param2: number): any;
+
+    TriggerSimpleHapticEvent(
+        controllerIndex: number,
+        type: number,
+        intensity: number,
+        dbGain: number,
+        param4: number,
+    ): any;
+
     UnregisterForControllerStateChanges(): void;
-    UnregisterForUIVisualization: any;
-    UploadChangesForCloudedControllerConfigs: any;
+
+    UnregisterForUIVisualization(controllerIndex: number): any;
+
+    UploadChangesForCloudedControllerConfigs(): any;
 }
 
 /**
@@ -1283,10 +1529,10 @@ export interface Installs {
     /**
      * Opens the uninstall wizard for specified app IDs.
      * @param {number[]} appIds - An array of app IDs to uninstall.
-     * @param {boolean} param1 - Additional parameter (exact usage may vary).
-     * @returns {any} - Returns an unknown value.
+     * @param {boolean} dontPrompt - Whether to *not* prompt the user to uninstall.
+     * @returns {void}
      */
-    OpenUninstallWizard(appIds: number[], param1: boolean): any;
+    OpenUninstallWizard(appIds: number[], dontPrompt: boolean): void;
 
     RegisterForShowConfirmUninstall: Unregisterable | any; // Broken? doesn't seem to work
 
@@ -1294,10 +1540,8 @@ export interface Installs {
      * Registers a callback function to be called when the "Failed Uninstall" dialog is shown.
      * @param {function} callback - The callback function to be called when the dialog is shown.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
-     * @remarks For example, a `reason` code of 16 indicates that the app is currently running, preventing the uninstallation.
-     * @todo Document other reason codes.
      */
-    RegisterForShowFailedUninstall(callback: (appId: number, reason: number) => void): Unregisterable | any;
+    RegisterForShowFailedUninstall(callback: (appId: number, reason: AppUpdateError) => void): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when the installation wizard is shown.
@@ -1337,7 +1581,11 @@ export interface Installs {
 export interface Messaging {
     // section - "ContentManagement", "JumpList", "PostToLibrary"
     // seems multipurpose
-    RegisterForMessages(section: string, callback: (param0: any) => void): Unregisterable | any;
+    // callback arguments are the same as in PostMessage
+    RegisterForMessages(
+        section: string,
+        callback: (section: string, param1: string, message: string) => void,
+    ): Unregisterable | any;
 
     /*
     function m(e) {
@@ -1346,7 +1594,7 @@ export interface Messaging {
         }))
     }
      */
-    PostMessage(section: string, param1: string, param2: string): void;
+    PostMessage(section: string, param1: string, message: string): void;
 }
 
 /**
@@ -1402,9 +1650,9 @@ export interface Music {
 
     /**
      * Sets the repeat status for music playback.
-     * @param {number} status - The repeat status. 0 = off, 1 = repeat all, 2 = repeat one.
+     * @param {MusicRepeatStatus} status - The repeat status.
      */
-    SetPlayingRepeatStatus(status: number): void;
+    SetPlayingRepeatStatus(status: MusicRepeatStatus): void;
 
     /**
      * Sets the shuffle status for music playback.
@@ -1415,6 +1663,7 @@ export interface Music {
     /**
      * Sets the volume for music playback.
      * @param {number} volume - The volume level to set.
+     * @remarks Ranges from 0 to 100.
      */
     SetVolume(volume: number): void;
 
@@ -1430,7 +1679,9 @@ export interface Music {
 }
 
 export interface Notifications {
-    RegisterForNotifications(callback: (param0: number, param1: number, param2: ArrayBuffer) => void): Unregisterable | any;
+    RegisterForNotifications(
+        callback: (notificationIndex: number, type: ClientUINotification, param2: ArrayBuffer) => void,
+    ): Unregisterable | any;
 }
 
 export interface VRDevice {
@@ -1450,8 +1701,11 @@ export interface DeviceProperties {
 
 export interface Keyboard {
     Hide(): any;
+
     RegisterForStatus: Unregisterable | any;
+
     SendDone(): any;
+
     SendText(key: string): any; //???
     Show(): any;
 }
@@ -1481,18 +1735,25 @@ export interface VROverlay {
 export interface OpenVR {
     Device: VRDevice;
     DeviceProperties: DeviceProperties;
-    GetWebSecret: any;
-    InstallVR: any;
+
+    GetWebSecret(): Promise<string>;
+
+    InstallVR(): any;
+
     Keyboard: Keyboard;
     PathProperties: PathProperties;
-    QuitAllVR: any;
+
+    QuitAllVR(): any;
+
     RegisterForButtonPress: Unregisterable | any;
     RegisterForHMDActivityLevelChanged: Unregisterable | any;
     RegisterForInstallDialog: Unregisterable | any;
     RegisterStartupErrors: Unregisterable | any;
     RegisterForVRHardwareDetected: Unregisterable | any;
     SetOverlayInteractionAffordance: any;
-    ShowNotification: any;
+
+    ShowNotification(title: string, description: string): any;
+
     StartVR: any;
     TriggerOverlayHapticEffect: any;
     VROverlay: VROverlay;
@@ -1505,9 +1766,12 @@ export interface Overlay {
      */
     DestroyGamePadUIDesktopConfiguratorWindow(): void;
 
-    GetOverlayBrowserInfo: any;
-    HandleGameWebCallback: any;
-    HandleProtocolForOverlayBrowser: any;
+    GetOverlayBrowserInfo(): any;
+
+    HandleGameWebCallback(url: string): any;
+
+    HandleProtocolForOverlayBrowser(appId: number, protocol: string): any;
+
     RegisterForActivateOverlayRequests: Unregisterable | any;
 
     /**
@@ -1515,7 +1779,9 @@ export interface Overlay {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForMicroTxnAuth(callback: (appId: number, microTxnId: string, param2: number, microTxnUrl: string) => void): Unregisterable | any;
+    RegisterForMicroTxnAuth(
+        callback: (appId: number, microTxnId: string, realm: SteamRealm, microTxnUrl: string) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when a microtransaction authorization is dismissed by the user in Steam's authorization page.
@@ -1524,21 +1790,27 @@ export interface Overlay {
      */
     RegisterForMicroTxnAuthDismiss(callback: (appId: number, microTxnId: string) => void): Unregisterable | any;
 
-    RegisterForNotificationPositionChanged: Unregisterable | any;
+    RegisterForNotificationPositionChanged(
+        callback: (appId: any, position: any, horizontalInset: number, verticalInset: number) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when an overlay is activated or closed.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForOverlayActivated(callback: (popUpContextId: number, appId: number, active: boolean, param3: boolean) => void): Unregisterable | any;
+    RegisterForOverlayActivated(
+        callback: (popUpContextId: number, appId: number, active: boolean, param3: boolean) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when the overlay browser protocols change.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForOverlayBrowserProtocols(callback: (browseProtocols: OverlayBrowserProtocols) => void): Unregisterable | any;
+    RegisterForOverlayBrowserProtocols(
+        callback: (browseProtocols: OverlayBrowserProtocols) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers **the** callback function to be called when the overlay browser information changes.
@@ -1572,9 +1844,9 @@ export interface Parental {
      * Unlocks the parental lock with the provided PIN.
      * @param {string} pin - The 4-digit PIN to unlock the parental lock.
      * @param {boolean} param1 - Additional parameter. // Todo: Unknown usage.
-     * @returns {Promise<number>} - A Promise that resolves to a number representing the result of the unlock operation.
+     * @returns {Promise<Result>} - A Promise that resolves to a number representing the result of the unlock operation.
      */
-    UnlockParentalLock(pin: string, param1: boolean): Promise<number>;
+    UnlockParentalLock(pin: string, param1: boolean): Promise<Result>;
 }
 
 export interface RemotePlay {
@@ -1585,24 +1857,31 @@ export interface RemotePlay {
 
     BEnabled(): Promise<boolean>;
 
-    BRemotePlayTogetherGuestOnPhoneOrTablet: any;
+    BRemotePlayTogetherGuestOnPhoneOrTablet(steam64Id: string, guestId: number): Promise<boolean>;
 
     BRemotePlayTogetherGuestSupported(): Promise<boolean>;
 
-    CancelInviteAndSession: any;
-    CancelInviteAndSessionWithGuestID: any;
-    CloseGroup: any;
+    CancelInviteAndSession(steam64Id: string): any;
+
+    CancelInviteAndSessionWithGuestID(steam64Id: string, guestId: number): any;
+
+    CloseGroup(): Promise<number>;
+
     CreateGroup: any;
-    CreateInviteAndSession: any;
-    CreateInviteAndSessionWithGuestID: any;
+
+    CreateInviteAndSession(steam64Id: string, param1: any): any;
+
+    CreateInviteAndSessionWithGuestID(steam64Id: string, guestId: number, param2: any): any;
 
     GetClientStreamingBitrate(): Promise<number>; //todo: -1 not streaming??
     GetClientStreamingQuality(): Promise<number>; //todo: -1 not streaming??
     GetControllerType(param0: number): Promise<ControllerType>; // todo: param0 with value 0 is host controller type - param0 is likely an index of clients or guestId?
     GetGameSystemVolume(): Promise<number>;
 
-    GetPerUserInputSettings: any;
-    GetPerUserInputSettingsWithGuestID: any;
+    GetPerUserInputSettings(steam64Id: string): any;
+
+    GetPerUserInputSettingsWithGuestID(steam64Id: string, guestId: number): any;
+
     IdentifyController: any;
     InstallAudioDriver: any;
     InstallInputDriver: any;
@@ -1619,40 +1898,63 @@ export interface RemotePlay {
     RegisterForInputDriverPrompt: Unregisterable | any;
     RegisterForInputDriverRestartNotice: Unregisterable | any;
 
-    RegisterForInputUsed(callback: (param0: string, param1: number, param2: number) => void): Unregisterable | any; // only fires on host
+    RegisterForInputUsed(
+        callback: (steam64Id: string, type: ClientUsedInputType, guestId: number) => void,
+    ): Unregisterable | any; // only fires on host
 
     RegisterForInviteResult: Unregisterable | any;
 
-    RegisterForNetworkUtilizationUpdate(callback: (param0: string, param1: number, param2: number, param3: number) => void): Unregisterable | any; // only fires on host
+    RegisterForNetworkUtilizationUpdate(
+        callback: (steam64Id: string, guestId: number, networkUtilization: number, networkDuration: number) => void,
+    ): Unregisterable | any; // only fires on host
 
-    RegisterForPlaceholderStateChanged: Unregisterable | any;
+    RegisterForPlaceholderStateChanged(callback: (isShowingPlaceholder: boolean) => void): Unregisterable | any;
+
     RegisterForPlayerInputSettingsChanged: Unregisterable | any;
-    RegisterForQualityOverride: Unregisterable | any;
+
+    RegisterForQualityOverride(callback: (hostStreamingQualityOverride: number) => void): Unregisterable | any;
+
     RegisterForRemoteClientLaunchFailed: Unregisterable | any;
 
     RegisterForRemoteClientStarted(callback: (steam64Id: string, appId: number) => void): Unregisterable | any; // only fires on client
 
     RegisterForRemoteClientStopped(callback: (steam64Id: string, appId: number) => void): Unregisterable | any; // only fires on client
 
+    RegisterForSessionStarted(callback: (steam64Id: any, gameId: any, guestId: any) => void): Unregisterable | any;
+
+    RegisterForSessionStopped(callback: (steam64Id: any, guestId: any) => void): Unregisterable | any;
+
     RegisterForSettingsChanges(callback: (remotePlaySettings: RemotePlaySettings) => void): Unregisterable | any;
 
-    SetClientStreamingBitrate: any;
-    SetClientStreamingQuality: any;
+    SetClientStreamingBitrate(bitrate: number): void;
+
+    SetClientStreamingQuality(quality: number): void;
 
     SetGameSystemVolume(volume: number): void;
 
-    SetPerUserControllerInputEnabled: any;
-    SetPerUserControllerInputEnabledWithGuestID: any;
-    SetPerUserKeyboardInputEnabled: any;
-    SetPerUserKeyboardInputEnabledWithGuestID: any;
-    SetPerUserMouseInputEnabled: any;
-    SetPerUserMouseInputEnabledWithGuestID: any;
+    SetPerUserControllerInputEnabled(steam64Id: string, enabled: boolean): any;
+
+    SetPerUserControllerInputEnabledWithGuestID(steam64Id: string, guestId: number, enabled: boolean): any;
+
+    SetPerUserKeyboardInputEnabled(steam64Id: string, enabled: boolean): any;
+
+    SetPerUserKeyboardInputEnabledWithGuestID(steam64Id: string, guestId: number, enabled: boolean): any;
+
+    SetPerUserMouseInputEnabled(steam64Id: string, enabled: boolean): any;
+
+    SetPerUserMouseInputEnabledWithGuestID(steam64Id: string, guestId: number, enabled: boolean): any;
+
     SetRemoteDeviceAuthorized: any;
+
     SetRemoteDevicePIN(pin: number): void;
-    SetRemotePlayEnabled: any;
+
+    SetRemotePlayEnabled(enabled: boolean): void;
+
     SetStreamingClientConfig: any;
     SetStreamingClientConfigEnabled: any;
-    SetStreamingDesktopToRemotePlayTogetherEnabled: any;
+
+    SetStreamingDesktopToRemotePlayTogetherEnabled(enabled: boolean): any;
+
     SetStreamingP2PScope: any;
     SetStreamingServerConfig: any;
     SetStreamingServerConfigEnabled: any;
@@ -1661,9 +1963,10 @@ export interface RemotePlay {
 
     StopStreamingSession: any;
     StopStreamingSessionAndSuspendDevice: any;
-    UnlockH264: any;
 
-    UnpairRemoteDevices(): void;// unpairs all devices
+    UnlockH264(): any;
+
+    UnpairRemoteDevices(): void; // unpairs all devices
 }
 
 /**
@@ -1761,36 +2064,239 @@ export interface Screenshots {
      * @param {number} filePrivacyState - The privacy state of the screenshot file.
      * @returns {Promise<boolean>} - A Promise that resolves to a boolean value indicating whether the upload was successful.
      */
-    UploadLocalScreenshot(appId: string, localScreenshot_hHandle: number, filePrivacyState: FilePrivacyState): Promise<boolean>;
+    UploadLocalScreenshot(
+        appId: string,
+        localScreenshot_hHandle: number,
+        filePrivacyState: FilePrivacyState,
+    ): Promise<boolean>;
 }
 
+/**
+ * Represents functionality for the server browser.
+ */
 export interface ServerBrowser {
-    AddFavoriteServer: any;
-    AddFavoriteServersByIP: any;
-    CancelServerQuery: any;
-    ConnectToServer: any;
-    CreateFriendGameInfoDialog: any;
-    CreateServerGameInfoDialog: any;
-    DestroyGameInfoDialog: any;
-    DestroyServerListRequest: any;
-    GetMultiplayerGames: any;
-    GetServerListPreferences: any;
-    PingServer: any;
-    RegisterForFavorites: any;
-    RegisterForFriendGamePlayed: any;
-    RegisterForGameInfoDialogs: any;
-    RegisterForPlayerDetails: any;
-    RegisterForServerInfo: any;
-    RemoveFavoriteServer: any;
-    RemoveHistoryServer: any;
-    RequestPlayerDetails: any;
-    SetServerListPreferences: any;
+    /**
+     * Adds a favorite server.
+     * @param {ServerBrowserServerFull} server - The server to add.
+     * @returns {Promise<string>} A Promise that resolves to an empty string if successful, `Invalid/missing IPv4?` if failed.
+     * @todo Refreshed the favorite servers list upon adding once, but doesn't now. :-(
+     */
+    AddFavoriteServer(server: ServerBrowserServerFull): Promise<string>;
+
+    /**
+     * Adds a favorite server by IP.
+     * @param {string} ip - The IP to add to favorite servers.
+     * @returns {Promise<string>} A Promise that resolves to an empty string if successful, localization string if failed.
+     */
+    AddFavoriteServersByIP(ip: string): Promise<string>;
+
+    CancelServerQuery(dialogId: number, queryServer: number): void;
+
+    /**
+     * Connects to a server from a given dialog.
+     * @param {number} dialogId - The dialog ID to use.
+     * @param {string} password - Server password, empty if none.
+     * @returns {Promise<JoinServerError>} A Promise that resolves to a connection status.
+     */
+    ConnectToServer(dialogId: number, password: string): Promise<JoinServerError>;
+
+    /**
+     * Creates a server info dialog, on which your friend is playing on.
+     * @param {number} pid - 0
+     * @param {string} steamId - A Steam64 ID of a friend.
+     * @returns {void}
+     */
+    CreateFriendGameInfoDialog(pid: number, steamId: string): void;
+
+    /**
+     * Creates a server info dialog.
+     * @param {string} ip - The IP to create a dialog for.
+     * @param {number} port - The IP's port.
+     * @param {number} queryPort -
+     * @returns {Promise<number>} A Promise that resolves to the current dialog ID.
+     */
+    CreateServerGameInfoDialog(ip: string, port: number, queryPort: number): Promise<number>;
+
+    /**
+     * Retrieves the server list.
+     * @param {number} appId - The game ID, 0 for every game.
+     * @param {ServerBrowserTab} queryType - The tab to use.
+     * @param {string[]} filters - Server filters.
+     * @param {function} serverCallback - What to do with the found server?
+     * @param {function} requestCompletedCallback - The callback function to be called when the request is completed.
+     * @returns {Promise<number>} A Promise that resolves to the current server list request ID.
+     * @throws Throws if the query type is unknown.
+     * @throws Throws if the filter list isn't key/value pairs, i.e. of an even length.
+     * @remarks Stops at 10000 if there are more servers to be found.
+     * @example
+     * Filter examples, may be combined:
+     * ```
+     * [ 'gamedir', 'cstrike' ] // Doesn't work?
+     * [ 'hasplayers', '1' ] // Only works with "1"?
+     * [ 'notfull', '1' ] // Doesn't work?
+     * [ 'map', 'cs_office' ] // Has to be an exact match!
+     * ```
+     */
+
+    /*
+    The enum in question:
+
+    (t =
+    'lan' == this.id
+        ? this.all_servers.length > 0
+            ? '#ServerBrowser_NoServersMatch'
+            : '#ServerBrowser_NoLanServers'
+        : 'internet' == this.id
+        ? this.all_servers.length > 0
+            ? '#ServerBrowser_NoInternetGamesMatch'
+            : e == l.zS.k_EServerFailedToRespond
+            ? '#ServerBrowser_MasterServerNotResponsive'
+            : e == l.zS.k_ENoServersListedOnMasterServer
+            ? '#ServerBrowser_MasterServerHasNoServersListed'
+            : '#ServerBrowser_NoInternetGamesResponded'
+        : 'favorites' == this.id
+        ? this.all_servers.length > 0
+            ? '#ServerBrowser_NoServersMatch'
+            : '#ServerBrowser_NoFavoriteServers'
+        : 'history' == this.id
+        ? this.all_servers.length > 0
+            ? '#ServerBrowser_NoHistoryServersMatch'
+            : '#ServerBrowser_NoServersPlayed'
+        : 'friends' == this.id
+        ? this.all_servers.length > 0
+            ? '#ServerBrowser_NoServersMatch'
+            : '#ServerBrowser_NoFriendsServers'
+        : 'BUGBUG'),
+    */
+    CreateServerListRequest(
+        appId: number,
+        queryType: ServerBrowserTab,
+        filters: string[],
+        serverCallback: (server: ServerBrowserServerFull) => void,
+        requestCompletedCallback: (response: number) => void,
+    ): Promise<number | OperationResponse>;
+
+    /**
+     * Destroys the game info dialog functions (but not the window).
+     * @param {number} dialogId - The dialog ID to use.
+     * @returns {void}
+     * @remarks ServerBrowser.CancelServerQuery may throw if it tries to ping the server.
+     */
+    DestroyGameInfoDialog(dialogId: number): void;
+
+    /**
+     * Stops retrieving the server list.
+     * @param {number} activeServerListRequestId - The active server request ID to use.
+     * @returns {void}
+     */
+    DestroyServerListRequest(activeServerListRequestId: number): void;
+
+    /**
+     * Gets a list of games that support the server browser feature.
+     * @returns {Promise<ServerBrowserGame[]>} A Promise that resolves to a list of games.
+     */
+    GetMultiplayerGames(): Promise<ServerBrowserGame[]>;
+
+    /**
+     * Gets the server browser preferences.
+     * @returns {Promise<ServerBrowserPreferences>} A Promise that resolves to server browser preferences.
+     */
+    GetServerListPreferences(): Promise<ServerBrowserPreferences>;
+
+    /**
+     * Pings the server of a specified dialog ID.
+     * @param {number} dialogId - The dialog ID to use.
+     * @returns {Promise<number | OperationResponse>}
+     */
+    PingServer(dialogId: number): Promise<number | OperationResponse>;
+
+    /**
+     * Registers a callback function to be called when a server gets added to favorite servers.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} An object that can be used to unregister the callback.
+     */
+    RegisterForFavorites(callback: (list: ServerBrowserFavoritesAndHistory) => void): Unregisterable | any;
+
+    /**
+     * Registers a callback function to be called when idk
+     * @param {number} dialogId - The dialog ID to use.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} An object that can be used to unregister the callback.
+     */
+    RegisterForFriendGamePlayed(
+        dialogId: number,
+        callback: (server: ServerBrowserFriendServer) => void,
+    ): Unregisterable | any;
+
+    /**
+     * Registers a callback function to be called when a server info dialog opens.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} An object that can be used to unregister the callback.
+     */
+    RegisterForGameInfoDialogs(callback: (dialogs: ServerBrowserDialog[]) => void): Unregisterable | any;
+
+    /**
+     * Registers a callback function to be called when player details get requested.
+     * @param {number} dialogId - The dialog ID to use.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} An object that can be used to unregister the callback.
+     */
+    RegisterForPlayerDetails(
+        dialogId: number,
+        callback: (player: ServerBrowserPlayer | ServerBrowserPlayerRefreshStatus) => void,
+    ): Unregisterable | any;
+
+    /**
+     * Registers a callback function to be called when a server gets pinged.
+     * @param {number} dialogId - The dialog ID to use.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} An object that can be used to unregister the callback.
+     */
+    RegisterForServerInfo(dialogId: number, callback: (server: ServerBrowserServerFull) => void): Unregisterable | any;
+
+    /**
+     * Removes a server from favorite servers.
+     * @param {ServerBrowserServer} server - The server to remove.
+     * @returns {void}
+     */
+    RemoveFavoriteServer(server: ServerBrowserServer): void;
+
+    /**
+     * Removes a server from history of played servers.
+     * @param {ServerBrowserServer} server - The server to remove.
+     * @returns {void}
+     */
+    RemoveHistoryServer(server: ServerBrowserServer): void;
+
+    /**
+     * Requests player details for a specific dialog.
+     * @param {number} dialogId - The dialog ID to use.
+     * @returns {Promise<number | OperationResponse>}
+     */
+    RequestPlayerDetails(dialogId: number): Promise<number | OperationResponse>;
+
+    /**
+     * Sets the server browser preferences.
+     * @param {ServerBrowserPreferences} prefs - Server list preferences.
+     * @returns {void}
+     */
+    SetServerListPreferences(prefs: ServerBrowserPreferences): void;
 }
 
 export interface Settings {
-    AddClientBeta: any;
-    ClearAllHTTPCaches: any;
-    ClearDownloadCache: any;
+    AddClientBeta(param0: any, name: string): any;
+
+    /**
+     * Clears HTTP cache in `<STEAMPATH>/appcache/httpcache`.
+     * @returns {void}
+     */
+    ClearAllHTTPCaches(): void;
+
+    /**
+     * Clears download cache and logs you out.
+     * @returns {void}
+     */
+    ClearDownloadCache(): void;
 
     GetAccountSettings(): Promise<AccountSettings>;
 
@@ -1805,7 +2311,7 @@ export interface Settings {
 
     GetGlobalCompatTools(): Promise<CompatibilityToolInfo[]>;
 
-    GetMonitorInfo: any;
+    GetMonitorInfo(): Promise<ArrayBuffer>;
 
     GetOOBETestMode(): Promise<boolean>;
 
@@ -1816,16 +2322,25 @@ export interface Settings {
 
     GetWindowed(): Promise<boolean>;
 
-    IgnoreSteamDeckRewards: any;
-    OpenWindowsMicSettings: any;
+    IgnoreSteamDeckRewards(): void;
+
+    /**
+     * Opens the Windows microphones dialog.
+     * @returns {void}
+     */
+    OpenWindowsMicSettings(): void;
+
     RegisterForMicVolumeUpdates: Unregisterable | any;
-    RegisterForSettingsArrayChanges: Unregisterable | any;
+
+    RegisterForSettingsArrayChanges(callback: (data: ArrayBuffer) => void): Unregisterable | any;
 
     RegisterForSettingsChanges(callback: (steamSettings: SteamSettings) => void): Unregisterable | any;
 
     RegisterForTimeZoneChange(callback: (timezoneId: string) => void): Unregisterable | any; // When timezone is changed from settings, callback will return new timezoneId
-    ReinitMicSettings: any;
-    RequestDeviceAuthInfo(): any;
+    ReinitMicSettings(): void;
+
+    RequestDeviceAuthInfo(): void;
+
     //
     SelectClientBeta(nBetaID: any): any;
 
@@ -1834,36 +2349,58 @@ export interface Settings {
 
     SetEnableSoftProcessKill(value: boolean): void; // Default value is false, this is Valve internal menu
 
-    SetHostname: any;
+    SetHostname(hostname: string): void;
+
     SetMicTestMode: any;
 
     SetOOBETestMode(value: boolean): void;
 
-    SetPreferredMonitor: any;
+    SetPreferredMonitor(monitor: string): void;
+
     SetRegisteredSteamDeck: any;
-    SetSaveAccountCredentials: any;
+
+    /**
+     * Sets the "Don't save account credentials on this computer" option.
+     * @param {boolean} value - Whether to save account credentials.
+     * @returns {void}
+     */
+    SetSaveAccountCredentials(value: boolean): void;
+
     SetSetting: any;
-    SetSteamPlayEnabled: any;
+
+    SetSteamPlayEnabled(value: boolean): void;
 
     SetTimeZone(timezoneId: string): void; // You can get valid timezoneIds from GetAvailableTimeZones()
     SetUseNintendoButtonLayout: any;
-    SetWindowed: any;
+
+    SetWindowed(value: boolean): void;
 
     SpecifyGlobalCompatTool(strToolName: string): void;
 
-    ToggleSteamInstall: any;
+    // "{"result":2,"message":""}"
+    ToggleSteamInstall(): any;
 }
 
 export interface SharedConnection {
-    AllocateSharedConnection: any;
-    Close: any;
-    RegisterOnBinaryMessageReceived: Unregisterable | any;
-    RegisterOnLogonInfoChanged: Unregisterable | any;
-    RegisterOnMessageReceived: Unregisterable | any;
+    // hSharedConnection is the number from AllocateSharedConnection()
+    AllocateSharedConnection(): Promise<number>;
+
+    // if no such number, sends this warning:
+    // src\clientdll\clientsharedconnection.cpp (154) : m_mapSharedConnections.HasElement( hSharedConnection )
+    Close(hSharedConnection: number): void;
+
+    RegisterOnBinaryMessageReceived(hSharedConnection: number, callback: (param0: any) => void): Unregisterable | any;
+
+    RegisterOnLogonInfoChanged(hSharedConnection: number, callback: (info: LogonInfo) => void): Unregisterable | any;
+
+    RegisterOnMessageReceived(hSharedConnection: number, callback: (param0: any) => void): Unregisterable | any;
+
     SendMsg: any;
     SendMsgAndAwaitBinaryResponse: any;
-    SubscribeToClientServiceMethod: any;
-    SubscribeToEMsg: any;
+
+    SubscribeToClientServiceMethod(hSharedConnection: number, param1: any): any;
+
+    SubscribeToEMsg(hSharedConnection: number, param1: any): any;
 }
 
 export interface Stats {
@@ -1873,6 +2410,7 @@ export interface Stats {
     // LibraryReviewSpotlight: ReviseClicked, PositiveClicked, ReviseCloseClicked, NegativeClicked, PositiveRevisePosted, NegativeRevisePosted, ReviseCanceled, ReviewCanceled, CloseClicked
     // Showcases: Delete, Save-Modify, Save-New
     RecordActivationEvent(param0: string, param1: string): any;
+
     RecordDisplayEvent: any;
 }
 
@@ -1890,6 +2428,7 @@ export interface Storage {
 
 export interface Streaming {
     AcceptStreamingEULA: any;
+
     CancelStreamGame(): void; // existing stream
 
     /**
@@ -1904,7 +2443,9 @@ export interface Streaming {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForStreamingClientLaunchProgress(callback: (actionType: string, param1: string, param2: number, param3: number) => void): Unregisterable | any;
+    RegisterForStreamingClientLaunchProgress(
+        callback: (actionType: string, taskDetails: string, done: number, total: number) => void,
+    ): Unregisterable | any;
 
     /**
      * Registers a callback function to be called when the streaming client is started (e.g., when clicking the stream button).
@@ -1917,9 +2458,9 @@ export interface Streaming {
      * Registers a callback function to be called when the streaming launch is complete.
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
-     * @todo Param0 is likely a code, 1 being it started, 10 being host computer is updating game, param1 just returns "complete"
+     * @todo `code` is likely a code, 1 being it started, 10 being host computer is updating game, `result` just returns "complete"
      */
-    RegisterForStreamingLaunchComplete(callback: (param0: number, param1: string) => void): Unregisterable | any;
+    RegisterForStreamingLaunchComplete(callback: (code: number, result: string) => void): Unregisterable | any;
 
     RegisterForStreamingShowEula: Unregisterable | any;
     RegisterForStreamingShowIntro: Unregisterable | any;
@@ -1929,7 +2470,9 @@ export interface Streaming {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForStreamingShowLaunchOptions(callback: (appId: number, launchOptions: LaunchOption[]) => void): Unregisterable | any; // Callback when streaming client receives launch options from host
+    RegisterForStreamingShowLaunchOptions(
+        callback: (appId: number, launchOptions: LaunchOption[]) => void,
+    ): Unregisterable | any; // Callback when streaming client receives launch options from host
 
     StreamingContinueStreamGame(): void; // existing game running on another streaming capable device
     StreamingSetLaunchOption: any;
@@ -1998,7 +2541,9 @@ export interface Audio {
      * @param {function} callback - The callback function to be called.
      * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
      */
-    RegisterForDeviceVolumeChanged(callback: (audioDeviceId: number, audioType: number, volume: number) => void): Unregisterable | any;
+    RegisterForDeviceVolumeChanged(
+        callback: (audioDeviceId: number, audioType: number, volume: number) => void,
+    ): Unregisterable | any;
 
     RegisterForServiceConnectionStateChanges: Unregisterable | any;
 
@@ -2127,10 +2672,15 @@ export interface Display {
 // CMsgSystemDisplayManagerState, CMsgSystemDisplayManagerSetMode
 export interface DisplayManager {
     ClearModeOverride(displayId: any): any;
+
     GetState: any;
+
     RegisterForStateChanges(callback: () => void): Unregisterable | any;
+
     SetCompatibilityMode(displayId: any): any;
+
     SetGamescopeInternalResolution(width: number, height: number): any;
+
     SetMode(base64: string): any; //
 }
 
@@ -2166,7 +2716,9 @@ export interface Network {
     RegisterForAppSummaryUpdate: Unregisterable | any;
     RegisterForConnectionStateUpdate: Unregisterable | any;
 
-    RegisterForConnectivityTestChanges(callback: (connectivityTestChange: ConnectivityTestChange) => void): Unregisterable | any;
+    RegisterForConnectivityTestChanges(
+        callback: (connectivityTestChange: ConnectivityTestChange) => void,
+    ): Unregisterable | any;
 
     RegisterForDeviceChanges(callback: (param0: any) => void): Unregisterable | any;
 
@@ -2196,10 +2748,13 @@ export interface Report {
 }
 
 export interface SystemUI {
-    CloseGameWindow: any;
-    GetGameWindowsInfo: any;
-    RegisterForFocusChangeEvents(callback: (param0: any) => void): Unregisterable | any;
-    RegisterForOverlayGameWindowFocusChanged: Unregisterable | any;
+    CloseGameWindow(appId: number, windowId: number): void;
+
+    GetGameWindowsInfo(appId: number, windowIds: number[]): Promise<GameWindowInfo>;
+
+    RegisterForFocusChangeEvents(callback: (event: FocusChangeEvent) => void): Unregisterable | any;
+
+    RegisterForOverlayGameWindowFocusChanged(callback: (param0: number, param1: number) => void): Unregisterable | any;
 
     RegisterForSystemKeyEvents(callback: (event: any) => void): Unregisterable | any; // eKey
 }
@@ -2212,12 +2767,14 @@ export interface System {
     Display: Display;
     DisplayManager: DisplayManager;
     Dock: Dock;
-    ExitFakeCaptivePortal: any;
-    FactoryReset: any;
-    FormatStorage: any;
+
+    ExitFakeCaptivePortal(): any;
+
+    FactoryReset(): any;
+
+    FormatStorage(forceFormat: boolean): any;
 
     GetLegacyAmpControlEnabled(): Promise<any>; // {"bAvailable":true,"bEnabled":false}
-
 
     GetOSType(): Promise<OSType>;
 
@@ -2228,16 +2785,23 @@ export interface System {
     IsSteamInTournamentMode(): Promise<boolean>;
 
     Network: Network;
-    NotifyGameOverlayStateChanged(param0: boolean, appId: number): any;
 
-    /*
-    {
-        strTitle: (0, o.Localize)("#AddNonSteam_PickAppTitle"),
-        rgFilters: y(),
-        strInitialFile: t
-    }
+    NotifyGameOverlayStateChanged(latestAppOverlayStateActive: boolean, appId: number): any;
+
+    /**
+     * Open a dialog for choosing a file.
+     * @param {FileDialog} prefs - Dialog preferences.
+     * @returns {Promise<string>} A Promise that resolves to the selected file name.
+     * @throws Throws if no file was selected.
      */
-    OpenFileDialog(param0: any): any;
+    OpenFileDialog(prefs: FileDialog): Promise<string | OperationResponse>;
+
+    /**
+     * Open a URL in the default web browser.
+     * @returns {void}
+     */
+    OpenInSystemBrowser(url: string): void;
+
     OpenLocalDirectoryInSystemExplorer(directory: string): void; // Opens local directory in system explorer
     Perf: Perf;
     RebootToAlternateSystemPartition: any;
@@ -2253,7 +2817,7 @@ export interface System {
 
     RegisterForOnSuspendRequest(callback: () => void): Unregisterable | any;
 
-    RegisterForSettingsChanges: Unregisterable | any; // deserialize binary
+    RegisterForSettingsChanges(callback: (data: ArrayBuffer) => void): Unregisterable | any; // deserialize binary
     Report: Report;
 
     /**
@@ -2261,13 +2825,13 @@ export interface System {
      */
     RestartPC(): any;
 
-    SetAirplaneMode(enabled: boolean): void;
+    SetAirplaneMode(value: boolean): void;
 
     SetLegacyAmpControl: any;
 
     ShutdownPC(): any;
 
-    SteamRuntimeSystemInfo: any;
+    SteamRuntimeSystemInfo(): Promise<string>;
 
     /**
      * Suspends the system.
@@ -2284,50 +2848,77 @@ export interface System {
 }
 
 export interface UI {
-    EnsureMainWindowCreated: any;
-    ExitBigPictureMode: any;
-    GetDesiredSteamUIWindows: any;
-    GetOSEndOfLifeInfo: any;
+    EnsureMainWindowCreated(): void;
+
+    ExitBigPictureMode(): void;
+
+    GetDesiredSteamUIWindows(): Promise<SteamWindow[]>;
+
+    /**
+     * Gets information about whether your OS will be unsupported in the future or not.
+     * @returns {Promise<OSEndOfLifeInfo>}
+     */
+    GetOSEndOfLifeInfo(): Promise<OSEndOfLifeInfo>;
 
     /**
      * Retrieves the current UI mode.
-     * @returns {Promise<number>} - A Promise that resolves to the current UI mode.
-     *                             4 represents Deck Mode/Big Picture Mode.
-     *                             7 represents Desktop Mode.
+     * @returns {Promise<UIMode>} - A Promise that resolves to the current UI mode.
      */
-    GetUIMode(): Promise<number>;
+    GetUIMode(): Promise<UIMode>;
 
-    NotifyAppInitialized: any;
+    NotifyAppInitialized(): void;
+
     RegisterDesiredSteamUIWindowsChanged: Unregisterable | any;
+
+    RegisterForErrorCondition(callback: (param0: number, param1: number) => void): Unregisterable | any;
+
     RegisterForKioskModeResetSignal: Unregisterable | any;
-    RegisterForUIModeChanged: Unregisterable | any;
-    ResetErrorCondition: any;
+
+    RegisterForUIModeChanged(callback: (mode: UIMode) => void): Unregisterable | any;
+
+    ResetErrorCondition(): void;
 
     /**
      * Sets the UI mode to the specified value.
-     * @param {number} mode - The UI mode to set. Use values:
-     *                       - 4 for Deck Mode/Big Picture Mode.
-     *                       - 7 for Desktop Mode.
+     * @param {UIMode} mode - The UI mode to set.
      * @returns {void}
      */
-    SetUIMode(mode: number): void;
+    SetUIMode(mode: UIMode): void;
 }
 
 export interface URL {
+    /**
+     * Executes a steam:// URL.
+     * @param url The URL to execute.
+     */
     ExecuteSteamURL(url: string): void;
-    GetSteamURLList: any;
-    GetWebSessionID: any;
-    RegisterForRunSteamURL: Unregisterable | any;
-    RegisterForSteamURLChanges: Unregisterable | any;
+
+    /**
+     * @remarks The array may be empty.
+     */
+    GetSteamURLList(param0: string[]): Promise<SteamURLs>;
+
+    GetWebSessionID(): Promise<string>;
+
+    /**
+     * Registers a callback to be called when a steam:// URL gets executed.
+     * @param {string} section - `rungameid`, `open`, etc.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+     */
+    RegisterForRunSteamURL(section: string, callback: (param0: number, url: string) => void): Unregisterable | any;
+
+    RegisterForSteamURLChanges(callback: () => void): void;
 }
 
 export interface Updates {
-    ApplyUpdates: any;
+    ApplyUpdates(param0: string): Promise<OperationResponse>;
 
     CheckForUpdates(): Promise<OperationResponse>; // Checks for software updates
+
     GetCurrentOSBranch(): Promise<OSBranch>;
 
-    RegisterForUpdateStateChanges: Unregisterable | any;
+    RegisterForUpdateStateChanges(callback: (data: ArrayBuffer) => void): Unregisterable | any;
 
     // 1 - Stable, 2 - Beta, 3 - Preview
     SelectOSBranch(branch: number): any; // enum?
@@ -2335,18 +2926,49 @@ export interface Updates {
 
 export interface User {
     AuthorizeMicrotxn(txnId: any): any;
-    CancelLogin: any;
-    CancelMicrotxn(txnId: any): any;
-    CancelShutdown: any;
-    ChangeUser: any;
-    Connect(): any;
-    FlipToLogin: any;
-    ForceShutdown: any;
-    ForgetPassword: any;
 
+    CancelLogin: any;
+
+    CancelMicrotxn(txnId: any): any;
+
+    /**
+     * Tries to cancel Steam shutdown.
+     * @returns {void}
+     * @remarks Used in the "Shutting down" dialog.
+     */
+    CancelShutdown(): void;
+
+    /**
+     * Opens the "Change Account" dialog.
+     * @returns {void}
+     */
+    ChangeUser(): void;
+
+    Connect(): Promise<OperationResponse>;
+
+    FlipToLogin(): void;
+
+    /**
+     * Forces a shutdown while shutting down.
+     * @returns {void}
+     * @remarks Used in the "Shutting down" dialog.
+     */
+    ForceShutdown(): void;
+
+    /**
+     * Forgets an account's password.
+     * @param {string} accountName - Login of the account to forget.
+     * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the operation succeeded or not.
+     */
+    ForgetPassword(accountName: string): Promise<boolean>;
+
+    /**
+     * Gets your country code.
+     * @returns {Promise<string>} A Promise that resolves to a string containing your country code.
+     */
     GetIPCountry(): Promise<string>;
 
-    GetLoginProgress: any;
+    GetLoginProgress(callback: (param0: number, param1: number) => void): Unregisterable | any;
 
     GetLoginUsers(): Promise<LoginUser[]>;
 
@@ -2354,9 +2976,11 @@ export interface User {
 
     GoOnline(): void;
 
-    OptOutOfSurvey: any;
-    PrepareForSystemSuspend: any;
-    Reconnect: any;
+    OptOutOfSurvey(): void;
+
+    PrepareForSystemSuspend(): any;
+
+    Reconnect(): void;
 
     RegisterForConnectionAttemptsThrottled(callback: (param0: any) => void): Unregisterable | any;
 
@@ -2379,20 +3003,47 @@ export interface User {
     RegisterForShutdownStart(callback: () => void): Unregisterable | any;
 
     RegisterForShutdownState: Unregisterable | any;
-    RemoveUser: any;
+
+    /**
+     * Removes an account from remembered users.
+     * @param {string} accountName - The account to remove.
+     * @returns {void}
+     */
+    RemoveUser(accountName: string): void;
+
     RequestSupportSystemReport: any;
-    ResumeSuspendedGames: any;
+
+    ResumeSuspendedGames(param0: boolean): any;
 
     // Hardware survey information
     RunSurvey(callback: (surveySections: SurveySection[]) => void): void;
 
     SendSurvey: any;
+
     SetAsyncNotificationEnabled(appId: number, enable: boolean): any;
-    SetLoginCredentials: any;
-    SetOOBEComplete: any;
-    ShouldShowUserChooser: any;
-    SignOutAndRestart: any;
-    StartLogin: any;
+
+    /**
+     * Sets given login credentials, but don't log in to that account.
+     * @param {string} accountName - Account name.
+     * @param {string} password - Account password.
+     * @param {boolean} rememberMe - Whether to remember that account.
+     * @returns {void}
+     */
+    SetLoginCredentials(accountName: string, password: string, rememberMe: boolean): void;
+
+    SetOOBEComplete(): void;
+
+    ShouldShowUserChooser(): Promise<boolean>;
+
+    /**
+     * Signs out and restarts Steam.
+     * @returnsn {void}
+     */
+    SignOutAndRestart(): void;
+
+    StartLogin(): void;
+
+    // is param0 offline mode?
     StartOffline(param0: boolean): any;
 
     /**
@@ -2404,76 +3055,324 @@ export interface User {
 }
 
 export interface WebChat {
-    BSuppressPopupsInRestore: any;
-    GetCurrentUserAccountID: any;
-    GetLocalAvatarBase64: any;
-    GetLocalPersonaName: any;
-    GetOverlayChatBrowserInfo: any;
-    GetPrivateConnectString: any;
-    GetPushToTalkEnabled: any;
-    GetSignIntoFriendsOnStart: any;
-    GetUIMode: any;
-    OnGroupChatUserStateChange: any;
-    OpenURLInClient(url: string, param1: any, param2: any): any;
-    RegisterForComputerActiveStateChange: Unregisterable | any;
-    RegisterForFriendPostMessage: Unregisterable | any;
-    RegisterForMouseXButtonDown: Unregisterable | any;
-    RegisterForPushToTalkStateChange: Unregisterable | any;
-    RegisterForUIModeChange: Unregisterable | any;
-    RegisterOverlayChatBrowserInfoChanged: Unregisterable | any;
-    SetActiveClanChatIDs: any;
-    SetNumChatsWithUnreadPriorityMessages: any;
+    BSuppressPopupsInRestore(): Promise<boolean>;
+
+    /**
+     * Gets your Steam3 ID.
+     * @returns {Promise<number>} A Promise that resolves to a Steam3 ID.
+     */
+    GetCurrentUserAccountID(): Promise<number>;
+
+    /**
+     * Gets the current user's 64x64 avatar as a data URL.
+     * @returns {Promise<string>} A Promise that resolves to the data URL.
+     */
+    GetLocalAvatarBase64(): Promise<string>;
+
+    /**
+     * Gets the current user's nickname.
+     * @returns {Promise<string>} A Promise that resolves to the nickname.
+     */
+    GetLocalPersonaName(): Promise<string>;
+
+    GetOverlayChatBrowserInfo(): Promise<any[]>;
+
+    // param0 - appid ?
+    GetPrivateConnectString(param0: number): Promise<string>;
+
+    /**
+     * Gets information about push-to-Talk.
+     * @returns {Promise<PushToTalkInfo>}
+     */
+    GetPushToTalkEnabled(): Promise<PushToTalkInfo>;
+
+    /**
+     * Gets the "Sign in to friends when Steam starts" option value.
+     * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the option is enabled or not.
+     */
+    GetSignIntoFriendsOnStart(): Promise<boolean>;
+
+    /**
+     * Retrieves the current UI mode.
+     * @returns {Promise<UIMode>} - A Promise that resolves to the current UI mode.
+     */
+    GetUIMode(): Promise<UIMode>;
+
+    OnGroupChatUserStateChange(chatGroupId: any, accountId: any, param2: any): any;
+
+    OnNewGroupChatMsgAdded(
+        groupId: number,
+        chatId: number,
+        accountId: number,
+        timestamp: number,
+        param4: number,
+        message: string,
+    ): any;
+
+    // Opens the URL in default web browser, despite what the name says ?
+    OpenURLInClient(url: string, pid: number, forceExternal: boolean): void;
+
+    /**
+     * Registers a callback function to be called when the computer's active state changes.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+     * @todo Changes to 2 after 10 seconds?
+     * @todo Does not affect the keyboard?
+     */
+    RegisterForComputerActiveStateChange(
+        callback: (state: ComputerActiveState, time: number) => void,
+    ): Unregisterable | any;
+
+    /**
+     * @todo WebChat.ShowFriendChatDialog does this.
+     */
+    RegisterForFriendPostMessage(callback: (data: FriendChatDialogData) => void): Unregisterable | any;
+
+    /**
+     * @returns {void}
+     * @todo To unregister, use WebChat.UnregisterForMouseXButtonDown() ?
+     */
+    RegisterForMouseXButtonDown(callback: any): void;
+
+    /**
+     * Registers a callback function to be called when the push-to-talk state changes.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+     */
+    RegisterForPushToTalkStateChange(callback: (state: boolean) => void): Unregisterable | any;
+
+    /**
+     * Registers a callback function to be called when the UI mode is changed.
+     * @param {function} callback - The callback function to be called.
+     * @returns {Unregisterable | any} - An object that can be used to unregister the callback.
+     */
+    RegisterForUIModeChange(callback: (mode: UIMode) => void): Unregisterable | any;
+
+    RegisterOverlayChatBrowserInfoChanged(callback: any): Unregisterable | any;
+
+    SetActiveClanChatIDs(param0: any[]): any;
+
+    SetNumChatsWithUnreadPriorityMessages(param0: number): void;
+
     SetPersonaName: any;
-    SetPushToMuteEnabled: any;
-    SetPushToTalkEnabled: any;
-    SetPushToTalkHotKey: any;
-    SetPushToTalkMouseButton: any;
+
+    SetPushToMuteEnabled(value: boolean): any;
+
+    SetPushToTalkEnabled(value: boolean): any;
+
+    SetPushToTalkHotKey(param0: number): void;
+
+    SetPushToTalkMouseButton(param0: number): void;
+
     SetVoiceChatActive: any;
     SetVoiceChatStatus: any;
     ShowChatRoomGroupDialog: any;
-    ShowFriendChatDialog: any;
-    UnregisterForMouseXButtonDown: any;
+
+    /**
+     * @todo Does not actually show the dialog.
+     */
+    ShowFriendChatDialog(steamid: string): void;
+
+    UnregisterForMouseXButtonDown(): void;
 }
 
 export interface WebUITransport {
-    GetTransportInfo(): any;
+    GetTransportInfo(): Promise<TransportInfo>;
 }
 
+/**
+ * Represents functionality for managing Steam's windows.
+ */
 export interface Window {
-    BringToFront(param0: any): any; // param0 optional?
+    BringToFront(forceOS: WindowBringToFront | undefined): any;
+
+    /**
+     * @todo Shuts down Steam too?
+     */
     Close(): any;
-    DefaultMonitorHasFullscreenWindow: any;
-    FlashWindow: any;
-    GetDefaultMonitorDimensions: any;
-    GetMousePositionDetails: any;
-    GetWindowDimensions: any;
-    GetWindowRestoreDetails(callback: (param0: any) => void): any;
-    HideWindow(): any;
-    IsWindowMaximized: any;
-    IsWindowMinimized: any;
-    MarkLastFocused: any;
-    Minimize: any;
-    MoveTo(x: number, y: number, ratio: number): any;
-    MoveToLocation: any;
-    // Takes param0 from callback of GetWindowRestoreDetails
-    PositionWindowRelative(param0: any, x: number, y: number, width: number, height: number): any;
-    ProcessShuttingDown: any;
-    ResizeTo(width: number, height: number, ratio: number): any;
-    RestoreWindowSizeAndPosition: any;
-    SetAutoDisplayScale(param0: any): any;
-    SetComposition(uiComposition: UIComposition, appIds: number[], param2: number): any;
-    SetHideOnClose(param0: boolean): any;
-    SetKeyFocus: any;
-    SetManualDisplayScaleFactor(param0: any): any;
-    SetMaxSize: any;
-    SetMinSize: any;
-    SetModal: any;
-    SetResizeGrip(width: number, height: number): any;
-    SetWindowIcon: any;
-    ShowWindow(): any;
-    StopFlashWindow: any;
-    ToggleFullscreen: any;
-    ToggleMaximize: any;
+
+    /**
+     * Is the Steam window fullscreen?
+     * @param {function} callback - The callback function to be called to receive the fullscreen state.
+     * @returns {void}
+     */
+    DefaultMonitorHasFullscreenWindow(callback: (fullscreen: boolean) => void): void;
+
+    /**
+     * Flashes the window in the taskbar.
+     * @returns {void}
+     */
+    FlashWindow(): void;
+
+    /**
+     * @todo Returns 0?
+     */
+    GetDefaultMonitorDimensions(callback: (param0: number) => void): void;
+
+    GetMousePositionDetails(callback: (details: string) => void): void;
+
+    /**
+     * Gets the window X position.
+     * @param {function} callback - The callback function to be called to receive the X position.
+     * @returns {void}
+     */
+    GetWindowDimensions(callback: (x: number) => void): void;
+
+    GetWindowRestoreDetails(callback: (details: string) => void): void;
+
+    /**
+     * Hides the window.
+     * @returns {void}
+     */
+    HideWindow(): void;
+
+    /**
+     * Is the window maximized?
+     * @param {function} callback - The callback function to be called to receive the maximized state.
+     * @returns {void}
+     */
+    IsWindowMaximized(callback: (maximized: boolean) => void): void;
+
+    /**
+     * Is the window minimized?
+     * @param {function} callback - The callback function to be called to receive the minimized state.
+     * @returns {void}
+     */
+    IsWindowMinimized(callback: (minimized: boolean) => void): void;
+
+    MarkLastFocused(): void;
+
+    /**
+     * Minimizes the window.
+     * @returns {void}
+     */
+    Minimize(): void;
+
+    /**
+     * Moves the window to given coordinates.
+     * @param {number} x - Window X position.
+     * @param {number} y - Window Y position.
+     * @param {number | undefined} dpi - Screen DPI.
+     * @returns {void}
+     */
+    MoveTo(x: number, y: number, dpi: number | undefined): void;
+
+    /**
+     * Moves the window to a given location.
+     * @param {string} location - Window location.
+     * @param {number | undefined} offset - X/Y offset.
+     * @returns {void}
+     */
+    MoveToLocation(location: WindowLocation, offset: number | undefined): void;
+
+    /**
+     * Moves the window relatively to given details.
+     * @param {string} details - Window details string from `Window.GetWindowRestoreDetails`.
+     * @param {number} x - Window X position.
+     * @param {number} y - Window Y position.
+     * @param {number} width - Window width.
+     * @param {number} height - Window height.
+     * @returns {void}
+     *
+     * @example
+     * Move the window to bottom right by 50 pixels:
+     * ```
+     * SteamClient.Window.GetWindowRestoreDetails(e => {
+     *     SteamClient.Window.PositionWindowRelative(e, 50, 50, 0, 0);
+     * })
+     * ```
+     */
+    PositionWindowRelative(details: string, x: number, y: number, width: number, height: number): void;
+
+    ProcessShuttingDown(): Promise<boolean>;
+
+    /**
+     * Resizes the window to given dimension.
+     * @param {number} width - Window width.
+     * @param {number} height - Window height.
+     * @param {boolean | number} applyBrowserScaleOrDPIValue
+     * @returns {void}
+     */
+    ResizeTo(width: number, height: number, applyBrowserScaleOrDPIValue: boolean | number): void;
+
+    /**
+     * Moves the window to given details.
+     * @param {string} details - Window details string from `Window.GetWindowRestoreDetails`.
+     * @returns {void}
+     */
+    RestoreWindowSizeAndPosition(details: string): void;
+
+    SetAutoDisplayScale(value: boolean): void;
+
+    SetComposition(uiComposition: UIComposition, appIds: number[], windowId: number): any;
+
+    /**
+     * Makes the window hide, but not close on pressing the close button.
+     * @param {boolean} value - Hide on close?
+     * @returns {void}
+     */
+    SetHideOnClose(value: boolean): void;
+
+    SetKeyFocus(value: boolean): void;
+
+    SetManualDisplayScaleFactor(displayScaleFactor: number): void;
+
+    /**
+     * Sets the window's max size.
+     * @param {number} width - Window's max width.
+     * @param {number} height - Window's max height.
+     * @returns {void}
+     */
+    SetMaxSize(width: number, height: number): void;
+
+    /**
+     * Sets the window's min size.
+     * @param {number} width - Window's max width.
+     * @param {number} height - Window's max height.
+     * @returns {void}
+     */
+    SetMinSize(width: number, height: number): void;
+
+    SetModal(value: boolean): void;
+
+    /**
+     * Sets the window's resize grip size.
+     * @param {number} width - Resize grip width.
+     * @param {number} height - Resize grip height.
+     * @returns {void}
+     */
+    SetResizeGrip(width: number, height: number): void;
+
+    /**
+     * Set the window's icon.
+     * @param {WindowIcon} icon - The window icon to be used.
+     * @returns {void}
+     */
+    SetWindowIcon(icon: WindowIcon): void;
+
+    /**
+     * Shows the window.
+     * @returns {void}
+     */
+    ShowWindow(): void;
+
+    /**
+     * Stops the window's taskbar flashing.
+     * @returns {void}
+     */
+    StopFlashWindow(): void;
+
+    /**
+     * Toggles the window's fullscreen state.
+     * @returns {void}
+     */
+    ToggleFullscreen(): void;
+
+    /**
+     * Toggles the window's maximized state.
+     * @returns {void}
+     */
+    ToggleMaximize(): void;
 }
 
 export interface SteamClient {
@@ -2552,17 +3451,53 @@ export interface AppLifetimeNotification {
 export type AppAchievements = {
     nAchieved: number;
     nTotal: number;
-    vecAchievedHidden: any[];
-    vecHighlight: any[];
-    vecUnachieved: any[];
+    vecAchievedHidden: AppAchievement[];
+    vecHighlight: AppAchievement[];
+    vecUnachieved: AppAchievement[];
 };
 
-export type AppLanguages = {
+export type AppLanguage = {
     strDisplayName: string;
+    /** A localization string for the language. */
     strShortName: string;
 };
 
 export type LogoPinPositions = 'BottomLeft' | 'UpperLeft' | 'CenterCenter' | 'UpperCenter' | 'BottomCenter';
+
+export type ServerBrowserTab = 'internet' | 'favorites' | 'history' | 'lan' | 'friends';
+
+export type WindowLocation =
+    | 'upper-left'
+    | 'lower-left'
+    | 'center-top'
+    | 'center-bottom'
+    | 'center-bottom'
+    | 'upper-right'
+    | 'lower-right';
+
+export type WindowIcon = 'steam' | 'messages' | 'voice';
+
+export type BrowserViewEvent =
+    | 'alert-dialog'
+    | 'before-close'
+    | 'blocked-request'
+    | 'can-go-back-forward-changed'
+    | 'confirm-dialog'
+    | 'favicon-urls-changed'
+    | 'find-in-page-results'
+    | 'finished-request'
+    | 'focus-changed'
+    | 'full-screen'
+    | 'history-changed'
+    | 'load-error'
+    | 'message'
+    | 'new-tab'
+    | 'node-has-focus'
+    | 'page-security'
+    | 'set-title'
+    | 'start-loading'
+    | 'start-request'
+    | 'toggle-find-in-page';
 
 export interface LogoPosition {
     pinnedPosition: LogoPinPositions;
@@ -2575,14 +3510,83 @@ export interface AppData {
     // more
 }
 
+export interface AppDeckDerivedProperties {
+    gamescope_frame_limiter_not_supported?: boolean;
+    non_deck_display_glyphs: boolean;
+    primary_player_is_controller_slot_0: boolean;
+    requires_h264: boolean;
+    requires_internet_for_setup: boolean;
+    requires_internet_for_singleplayer: boolean;
+    requires_manual_keyboard_invoke: false;
+    requires_non_controller_launcher_nav: false;
+    small_text: boolean;
+    supported_input: number;
+}
+
+export interface AppLibraryAssets {
+    logoPosition?: LogoPosition;
+    strCapsuleImage: string;
+    strHeroBlurImage: string;
+    strHeroImage: string;
+    strLogoImage: string;
+}
+
+export interface AppBeta {
+    /** Beta name. */
+    strName: string;
+    /** Beta description. */
+    strDescription: string;
+}
+
+export interface DeckCompatTestResult {
+    // enum ?
+    test_result: number;
+    /** A localization string. */
+    test_loc_token: string;
+}
+
+export interface AppDLC {
+    /** Is the DLC availble on the store? */
+    bAvailableOnStore: boolean;
+    bEnabled: boolean;
+    /** Disk usage, in bytes. */
+    lDiskUsageBytes: number;
+    /** Purchase date. */
+    rtPurchaseDate: number;
+    rtStoreAssetModifyType: number;
+    /** Store header image filename. */
+    strHeaderFilename: string;
+    /** Display name. */
+    strName: string;
+    /** State (installed/notinstalled). */
+    strState: string;
+    /** App ID. */
+    unAppID: number;
+}
+
+export interface AppSoundtrack {
+    /** Purchase date. */
+    rtPurchaseDate: number;
+    rtStoreAssetModifyType: number;
+    /** Display name. */
+    strName: string;
+    /** State (installed/notinstalled). */
+    strState: string;
+    /** App ID. */
+    unAppID: number;
+}
+
 export interface AppDetails {
     achievements: AppAchievements;
+    /** Indicates whether the application is available on the store. */
+    bAvailableContentOnStore: boolean;
     bCanMoveInstallFolder: boolean;
     bCloudAvailable: boolean;
     bCloudEnabledForAccount: boolean;
     bCloudEnabledForApp: boolean;
     bCloudSyncOnSuspendAvailable: boolean;
     bCloudSyncOnSuspendEnabled: boolean;
+    /** Indicates whether the application has community market available. */
     bCommunityMarketPresence: boolean;
     bEnableAllowDesktopConfiguration: boolean;
     bFreeRemovableLicense: boolean;
@@ -2591,6 +3595,7 @@ export interface AppDetails {
     bHasLockedPrivateBetas: boolean;
     bIsExcludedFromSharing: boolean;
     bIsSubscribedTo: boolean;
+    bIsThirdPartyUpdater: boolean;
     bOverlayEnabled: boolean;
     bOverrideInternalResolution: boolean;
     bRequiresLegacyCDKey: boolean;
@@ -2600,28 +3605,35 @@ export interface AppDetails {
     bSupportsCDKeyCopyToClipboard: boolean;
     bVRGameTheatreEnabled: boolean;
     bWorkshopVisible: boolean;
+    deckDerivedProperties?: AppDeckDerivedProperties;
     eAppOwnershipFlags: AppOwnershipFlags | number; // is this a bitmask?
-    eAutoUpdateValue: number;
-    eBackgroundDownloads: number;
+    eAutoUpdateValue: AutoUpdateBehavior;
+    eBackgroundDownloads: BackgroundDownloadsBehavior;
     eCloudSync: number;
     eControllerRumblePreference: number; // ControllerRumbleSetting?
     eDisplayStatus: DisplayStatus;
     eEnableThirdPartyControllerConfiguration: number;
     eSteamInputControllerMask: number;
+    /**
+     * Index of the install folder. -1 if not installed.
+     */
     iInstallFolder: number;
+    /** Disk space required for installation, in bytes. */
+    lDiskSpaceRequiredBytes: number;
+    /** Application disk space usage, in bytes. */
     lDiskUsageBytes: number;
+    /** DLC disk space usage, in bytes. */
     lDlcUsageBytes: number;
     nBuildID: number;
     nCompatToolPriority: number;
+    /** Total play time, in minutes. */
     nPlaytimeForever: number;
+    /** Screenshot count. */
     nScreenshots: number;
     rtLastTimePlayed: number;
     rtLastUpdated: number;
     rtPurchased: number;
-    selectedLanguage: {
-        strDisplayName: string;
-        strShortName: string;
-    };
+    selectedLanguage: AppLanguage;
     strCloudBytesAvailable: string;
     strCloudBytesUsed: string;
     strCompatToolDisplayName: string;
@@ -2634,6 +3646,7 @@ export interface AppDetails {
     strHomepageURL: string;
     strLaunchOptions: string;
     strManualURL: string;
+    /** Steam64 ID. */
     strOwnerSteamID: string;
     strResolutionOverride: string;
     strSelectedBeta: string;
@@ -2642,17 +3655,20 @@ export interface AppDetails {
     strShortcutStartDir: string;
     strSteamDeckBlogURL: string;
     unAppID: number;
-    vecBetas: any[];
-    vecDLC: any[];
-    vecDeckCompatTestResults: any[];
-    vecLanguages: AppLanguages[];
+    unEntitledContentApp: number;
+    unTimedTrialSecondsAllowed: number;
+    unTimedTrialSecondsPlayed: number;
+    vecBetas: AppBeta[];
+    vecChildConfigApps: number[];
+    vecDLC: AppDLC[];
+    vecDeckCompatTestResults: DeckCompatTestResult[];
+    vecLanguages: AppLanguage[];
     vecLegacyCDKeys: any[];
-    vecMusicAlbums: any[];
+    vecMusicAlbums: AppSoundtrack[];
+    /** windows | osx | linux */
     vecPlatforms: string[];
-    vecScreenShots: any[];
-    libraryAssets?: {
-        logoPosition?: LogoPosition;
-    };
+    vecScreenShots: Screenshot[];
+    libraryAssets?: AppLibraryAssets;
 }
 
 // Appears to be all optional fields :disaster:
@@ -2663,9 +3679,9 @@ export interface SteamAppOverview {
     sort_as: string;
 
     /*
-     * Possible bitmask values, but I haven't spotted any of them being masked in the app_type field.
-     * Should be safe as an enum.
-     */
+   * Possible bitmask values, but I haven't spotted any of them being masked in the app_type field.
+   * Should be safe as an enum.
+   */
     app_type: AppType;
     mru_index: number | undefined;
     rt_recent_activity_time: number;
@@ -2706,7 +3722,7 @@ export interface SteamAppOverview {
     site_license_site_name?: string;
     shortcut_override_appid?: number;
     steam_deck_compat_category: SteamDeckCompatibilityCategory; // Default should be Unknown
-    rt_last_time_locally_played?: number
+    rt_last_time_locally_played?: number;
     rt_purchased_time: number;
     header_filename?: string;
 
@@ -2742,6 +3758,11 @@ export interface SteamAppOverviewClientData {
     is_invalid_os_type?: boolean;
     playtime_left?: number;
     cloud_status: AppCloudStatus;
+}
+
+export interface ConflictingFileTimestamp {
+    rtLocalTime: number;
+    rtRemoteTime: number;
 }
 
 /**
@@ -2814,93 +3835,95 @@ export interface PotentialInstallFolder {
 }
 
 export interface AchievementNotification {
-    achievement: AppAchievements,
-    nCurrentProgress: number,
-    nMaxProgress: number,
-    unAppID: number
+    achievement: AppAchievements;
+    nCurrentProgress: number;
+    nMaxProgress: number;
+    unAppID: number;
 }
 
 export interface ScreenshotNotification {
-    details: Screenshot,
-    hScreenshot: number,
-    strOperation: string,
-    unAppID: number,
+    details: Screenshot;
+    hScreenshot: number;
+    strOperation: string;
+    unAppID: number;
 }
 
 export interface Screenshot {
-    nAppID: number,
-    strGameID: string,
-    hHandle: number,
-    nWidth: number,
-    nHeight: number,
-    nCreated: number, // timestamp
-    ePrivacy: FilePrivacyState,
-    strCaption: "",
-    bSpoilers: boolean,
-    strUrl: string,
-    bUploaded: boolean,
-    ugcHandle: string
+    nAppID: number;
+    strGameID: string;
+    hHandle: number;
+    nWidth: number;
+    nHeight: number;
+    nCreated: number; // timestamp
+    ePrivacy: FilePrivacyState;
+    strCaption: '';
+    bSpoilers: boolean;
+    strUrl: string;
+    bUploaded: boolean;
+    ugcHandle: string;
 }
 
-
 export interface DownloadItem {
-    active: boolean,
-    appid: number,
-    buildid: number,
-    completed: boolean,
-    completed_time: number,
-    deferred_time: number,
-    downloaded_bytes: number,
-    launch_on_completion: boolean,
-    paused: boolean,
-    queue_index: number,
-    target_buildid: number,
-    total_bytes: number,
-    update_error: string,
-    update_result: number,
-    update_type_info: UpdateTypeInfo[]
+    active: boolean;
+    appid: number;
+    buildid: number;
+    completed: boolean;
+    completed_time: number;
+    deferred_time: number;
+    downloaded_bytes: number;
+    launch_on_completion: boolean;
+    paused: boolean;
+    queue_index: number;
+    target_buildid: number;
+    total_bytes: number;
+    update_error: string;
+    update_result: number;
+    update_type_info: UpdateTypeInfo[];
 }
 
 export interface UpdateTypeInfo {
-    completed_update: boolean,
-    downloaded_bytes: number,
-    has_update: boolean,
-    total_bytes: number
+    completed_update: boolean;
+    downloaded_bytes: number;
+    has_update: boolean;
+    total_bytes: number;
 }
 
 export interface DownloadOverview {
-    lan_peer_hostname: string,
-    paused: boolean,
-    throttling_suspended: boolean,
-    update_appid: number,
-    update_bytes_downloaded: number,
-    update_bytes_processed: number,
-    update_bytes_staged: number,
-    update_bytes_to_download: number,
-    update_bytes_to_process: number,
-    update_bytes_to_stage: number,
-    update_disc_bytes_per_second: number,
-    update_is_install: boolean,
-    update_is_prefetch_estimate: boolean,
-    update_is_shader: boolean,
-    update_is_upload: boolean,
-    update_is_workshop: boolean,
-    update_network_bytes_per_second: number,
-    update_peak_network_bytes_per_second: number,
-    update_seconds_remaining: number,
-    update_start_time: number,
-    update_state: "None" | "Starting" | "Updating" | "Stopping"
+    lan_peer_hostname: string;
+    paused: boolean;
+    throttling_suspended: boolean;
+    update_appid: number;
+    update_bytes_downloaded: number;
+    update_bytes_processed: number;
+    update_bytes_staged: number;
+    update_bytes_to_download: number;
+    update_bytes_to_process: number;
+    update_bytes_to_stage: number;
+    update_disc_bytes_per_second: number;
+    update_is_install: boolean;
+    update_is_prefetch_estimate: boolean;
+    update_is_shader: boolean;
+    update_is_upload: boolean;
+    update_is_workshop: boolean;
+    update_network_bytes_per_second: number;
+    update_peak_network_bytes_per_second: number;
+    update_seconds_remaining: number;
+    update_start_time: number;
+    update_state: 'None' | 'Starting' | 'Updating' | 'Stopping';
 }
 
 export interface InstallInfo {
-    rgAppIDs: InstallInfoApps[],
+    rgAppIDs: InstallInfoApps[];
     eInstallState: number;
     nDiskSpaceRequired: number;
     nDiskSpaceAvailable: number;
     nCurrentDisk: number;
     nTotalDisks: number;
     bCanChangeInstallFolder: boolean;
-    iInstallFolder: number; // index of the install folder
+    /**
+     * Index of the install folder. -1 if not installed.
+     */
+    iInstallFolder: number;
     iUnmountedFolder: number;
     currentAppID: number;
     eAppError: AppError;
@@ -3043,17 +4066,23 @@ export interface PrePurchaseInfo {
 }
 
 export interface AppAchievement {
-    strID: string;
-    strName: string;
-    strDescription: string;
     bAchieved: boolean;
-    rtUnlocked: number; // epoch time
-    strImage: string;
     bHidden: boolean;
     flMinProgress: number;
     flCurrentProgress: number;
     flMaxProgress: number;
+    /** How many players have this achievement, in percentage. */
     flAchieved: number;
+    /** When this achievement was unlocked. */
+    rtUnlocked: number;
+    /** Achievement description. */
+    strDescription: string;
+    /** Achievement ID. */
+    strID: string;
+    /** Achievement icon. */
+    strImage: string;
+    /** Achievement name. */
+    strName: string;
 }
 
 export interface AppAchievementData {
@@ -3062,7 +4091,7 @@ export interface AppAchievementData {
 
 export interface AppAchievementResponse {
     result: number;
-    data: AppAchievementData
+    data: AppAchievementData;
 }
 
 export interface NonSteamApp {
@@ -3475,7 +4504,7 @@ export interface FolderChange {
 
 export interface MusicTrack {
     uSoundtrackAppId: number;
-    ePlaybackStatus: number;// 1 - playing, 2 - paused
+    ePlaybackStatus: number; // 1 - playing, 2 - paused
     eRepeatStatus: number;
     bShuffle: boolean;
     nVolume: number;
@@ -3488,6 +4517,11 @@ export interface SoundtrackDetails {
     metadata: SoundtrackMetadata;
     vecAdditionalImageAssetURLs: string[];
     strCoverImageAssetURL: string;
+}
+
+export interface StoreTagLocalization {
+    tag: number;
+    string: string;
 }
 
 export interface SoundtrackMetadata {
@@ -3528,6 +4562,11 @@ export interface OverlayBrowserProtocols {
 }
 
 export interface LaunchOption {
+    /**
+     * @remarks This is an integer, despite the prefix.
+     */
+    bIsVRLaunchOption: number;
+    eType: AppLaunchOptionType;
     nIndex: number;
     strDescription: string;
     strGameName: string;
@@ -3867,6 +4906,648 @@ export interface ControllerConfigCloudStateChange {
     bSyncError: boolean;
 }
 
+export interface TouchGesture {
+    eTouchGesture: TouchGestureType;
+    x: number;
+    y: number;
+}
+
+export interface BrowserViewInit {
+    bOnlyAllowTrustedPopups?: boolean;
+    parentPopupBrowserID?: number;
+    /** Initial URL to go to. */
+    strInitialURL?: string;
+    strUserAgentIdentifier?: string;
+    strUserAgentOverride?: string;
+    strVROverlayKey?: string;
+}
+
+export interface BrowserViewPopup {
+    /**
+     * Blur the popup.
+     * @param {boolean} enabled - Is the blur enabled?
+     * @param {boolean} backgroundColor
+     * @param {boolean} blur
+     * @returns {void}
+     * @todo backgroundColor is a bool? Whatever that means
+     */
+    AddGlass(enabled: boolean, backgroundColor: boolean, blur: boolean): void;
+
+    /**
+     * Indicates whether you can go backward in history or not.
+     * @returns {boolean} true if you can go backward in history, false otherwise.
+     */
+    CanGoBackward(): boolean;
+
+    /**
+     * Indicates whether you can go forward in history or not.
+     * @returns {boolean} true if you can go forward in history, false otherwise.
+     */
+    CanGoForward(): boolean;
+
+    // alert() i assume
+    DialogResponse(param0: boolean): void;
+
+    EnableSteamInput(): void;
+
+    /**
+     * Find a string in the page.
+     * @param {string} input - The string to find.
+     * @param {boolean} param1 - Additional parameter (exact usage may vary).
+     * @param {boolean} previous - `true` for previous match, `false` for next match.
+     * @returns {void}
+     */
+    FindInPage(input: string, param1: boolean, previous: boolean): void;
+
+    /**
+     * Get the current popup position.
+     * @returns {BrowserViewBounds} The window position.
+     */
+    GetBounds(): BrowserViewBounds;
+
+    /**
+     * Go back in history.
+     * @returns {void}
+     */
+    GoBack(): void;
+
+    /**
+     * Go forward in history.
+     * @returns {void}
+     */
+    GoForward(): void;
+
+    /**
+     * @remarks `| number` is used for `BrowserViewContextMenu.custom_commands`.
+     */
+    HandleContextMenuCommand(command: BrowserViewContextMenuCommand | number, param2: BrowserViewContextMenu): void;
+
+    /**
+     * Load the specified URL.
+     * @param {string} url - The URL to go to.
+     * @returns {void}
+     */
+    LoadURL(url: string): void;
+
+    NotifyUserActivation(): void;
+
+    /**
+     * Paste the current clipboard selection.
+     * @returns {void}
+     */
+    Paste(): void;
+
+    PostMessage(message: string, args: string): boolean;
+
+    /**
+     * Reload the page.
+     * @returns {void}
+     */
+    Reload(): void;
+
+    /**
+     * Load the specified URL, but don't save history.
+     * @param {string} url - The URL to go to.
+     * @returns {void}
+     */
+    ReplaceURL(url: string): void;
+
+    /**
+     * Define blocked protocols, like https, etc.
+     * @param protocols The protocols to block, separated by a semicolon.
+     * @returns {void}
+     */
+    SetBlockedProtocols(protocols: string): void;
+
+    /**
+     * Sets the browser window position.
+     * @param {number} x - Browser window X position.
+     * @param {number} y - Browser window Y position.
+     * @param {number} width - Browser window width.
+     * @param {number} height - Browser window height.
+     * @returns {void}
+     */
+    SetBounds(x: number, y: number, width: number, height: number): void;
+
+    /**
+     * Sets the browser window focus state.
+     * @param {boolean} value - Is the window focused?
+     * @returns {void}
+     */
+    SetFocus(value: boolean): void;
+
+    SetName(browserName: string): void;
+
+    /**
+     * Registers a callback to be called when a context menu is shown.
+     * @param {function} callback - The callback function to be called.
+     */
+    SetShowContextMenuCallback(callback: (data: BrowserViewContextMenu) => void): void;
+
+    /**
+     * Registers a callback to be called when a steam:// protocol URL is loaded.
+     * @returns {void}
+     */
+    SetSteamURLCallback(callback: (steamURL: string) => void): void;
+
+    /**
+     * Raises the browser window.
+     * @returns {void}
+     */
+    SetTopWindow(): void;
+
+    /**
+     * @todo unconfirmed
+     */
+    SetTouchGesturesToCancel(gestures: TouchGestureType[]): void;
+
+    SetVRKeyboardVisibility(value: boolean): void;
+
+    SetVisible(value: boolean): void;
+
+    /**
+     * Stop the "find in page" function.
+     * @returns {void}
+     */
+    StopFindInPage(): void;
+
+    /**
+     * Stop listening for an event.
+     * @param {BrowserViewEvent} event - The event to stop listening to.
+     * @param {function} callback - The callback function to be called.
+     * @returns {void}
+     */
+    off(event: BrowserViewEvent, callback: (args: any) => void): void;
+
+    /**
+     * Start listening for an event.
+     * @param {BrowserViewEvent} event - The event to start listening to.
+     * @param {function} callback - The callback function to be called.
+     * @returns {void}
+     */
+    on(event: BrowserViewEvent, callback: (args: any) => void): void;
+
+    /**
+     * Fires when an `alert()` dialog appears.
+     */
+    on(event: 'alert-dialog', callback: (message: string) => void): void;
+
+    /**
+     * Fires when the browser is about to get destroyed.
+     */
+    on(event: 'before-close', callback: () => void): void;
+
+    /**
+     * Fires when a URL gets blocked.
+     * @todo not SetBlockedProtocols, maybe only steam links
+     */
+    on(event: 'blocked-request', callback: (blockedURL: string) => void): void;
+
+    /**
+     * Fires when `CanGoBack() or `CanGoForward()` state changes.
+     */
+    on(event: 'can-go-back-forward-changed', callback: (canGoBackward: boolean, canGoForward: boolean) => void): void;
+
+    /**
+     * Fires when a `confirm()` dialog appears.
+     */
+    on(event: 'confirm-dialog', callback: (message: string) => void): void;
+
+    /**
+     * Fires when the browser's favicon changes.
+     */
+    on(event: 'favicon-urls-changed', callback: (faviconURLs: string[]) => void): void;
+
+    /**
+     * Fires when "Find in page" gets its results.
+     */
+    on(event: 'find-in-page-results', callback: (results: number, activeResultIndex: number) => void): void;
+
+    /**
+     * Fires when the page finishes loading.
+     */
+    on(event: 'finished-request', callback: (currentURL: string, previousURL: string) => void): void;
+
+    /**
+     * Fires when the browser goes focused or vice versa.
+     */
+    on(event: 'focus-changed', callback: (focused: boolean) => void): void;
+
+    /**
+     * Fires when the browser goes fullscreen or vice versa.
+     */
+    on(event: 'full-screen', callback: (fullscreen: boolean) => void): void;
+
+    /**
+     * Fires when history changes occur.
+     */
+    on(event: 'history-changed', callback: (history: BrowserViewHistory) => void): void;
+
+    /**
+     * Fires when the URL fails to load.
+     */
+    on(event: 'load-error', callback: (errorCode: number, errorURL: string, errorDescription: string) => void): void;
+
+    /**
+     * @todo Same as PostMessage?
+     */
+    on(event: 'message', callback: (args: any) => void): void;
+
+    on(event: 'new-tab', callback: (args: any) => void): void;
+
+    /**
+     * Fires when a node gets focused.
+     */
+    on(
+        event: 'node-has-focus',
+        callback: (elementIdOrTagName: string, elementTag: string, param2: any, param3: string, param4: boolean) => void,
+    ): void;
+
+    on(event: 'page-security', callback: (url: string, pageSecurity: BrowserViewPageSecurity) => void): void;
+
+    /**
+     * Fires when the page's `<title>` changes.
+     */
+    on(event: 'set-title', callback: (title: string) => void): void;
+
+    /**
+     * Fires when the page starts loading.
+     */
+    on(event: 'start-loading', callback: (url: string, param1: boolean) => void): void;
+
+    /**
+     * Fires when the page starts loading.
+     */
+    on(event: 'start-request', callback: (url: string) => void): void;
+
+    /**
+     * Fires when "Find in page" gets toggled.
+     */
+    on(event: 'toggle-find-in-page', callback: () => void): void;
+}
+
+export interface BrowserViewBounds {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export interface BrowserViewContextMenuCustomCommand {
+    id: number;
+    label: string;
+}
+
+export interface BrowserViewContextMenu {
+    /**
+     * Mouse X position inside the browser view.
+     */
+    coord_x: number;
+    /**
+     * Mouse Y position inside the browser view.
+     */
+    coord_y: number;
+    custom_commands: BrowserViewContextMenuCustomCommand[];
+    /**
+     * Bitmask representing edit state.
+     * @remarks Appears on editable elements like `<input>`, etc.
+     * @example
+     * May be used with BrowserViewContextMenuEditFlag:
+     * ```js
+     * edit_state_flags & BrowserViewContextMenuEditFlag.CanCut != 0 // Can cut text
+     * ```
+     */
+    edit_state_flags?: number;
+    /**
+     * The misspelled word the cursor is on.
+     * @remarks Appears on an editable element with text.
+     */
+    misspelled_word?: string;
+    /**
+     * Browser page URL.
+     * @todo Appears when there is selected text?
+     */
+    link_url?: string;
+    /**
+     * Browser page URL.
+     */
+    page_url: string;
+    /**
+     * Selected text.
+     * @remarks Appears when there is selected text.
+     */
+    selection_text?: string;
+    /**
+     * Bitmask representing context menu type.
+     * @example
+     * May be used with BrowserViewContextMenuTypeFlag:
+     * ```js
+     * type_flags & BrowserViewContextMenuTypeFlag.Selection != 0 // Selected text present
+     * ```
+     */
+    type_flags: number;
+    /**
+     * Browser page URL.
+     * @todo Appears when there is selected text?
+     */
+    unfiltered_link_url?: string;
+}
+
+export interface BrowserViewHistoryEntry {
+    url: string;
+}
+
+export interface BrowserViewHistory {
+    index: number;
+    entries: BrowserViewHistoryEntry[];
+}
+
+export interface BrowserViewPageSecurity {
+    bHasCertError: boolean;
+    bIsEVCert: boolean;
+    bIsSecure: boolean;
+    certExpiry: number;
+    certName: string;
+    issuerName: string;
+    nCertBits: number;
+}
+
+export interface ServerBrowserGame {
+    /** The ID of the game. */
+    appid: number;
+    /** The ID of the game. */
+    gameid: string;
+    /** The game folder. */
+    gamedir: string;
+    /** The game's name. */
+    name: string;
+}
+
+export interface ServerBrowserGameFilter {
+    /** Has users playing */
+    NoEmpty: boolean;
+    /** Server not full */
+    NoFull: boolean;
+    /** Is not password protected */
+    NoPassword: boolean;
+    /** Anti-cheat */
+    Secure: ServerBrowserGameFilterAntiCheat;
+    /** The ID of the game */
+    appid: number;
+    /** The game folder */
+    game: string;
+    /** Map filter */
+    map: string;
+    /** Latency */
+    ping: ServerBrowserGameFilterPing;
+}
+
+export interface ServerBrowserServer {
+    /** The ID of the game. */
+    appid: number;
+    /** The server IP. */
+    ip: string;
+    /** The server port. */
+    port: number;
+    queryPort: number;
+    /** Last time played as a UNIX timestamp. */
+    lastPlayed: number;
+}
+
+export interface ServerBrowserServerFull extends ServerBrowserServer {
+    /** Do not refresh if had unsuccessful response? */
+    bDoNotRefresh: boolean;
+    /** Found the server? */
+    bHadSuccessfulResponse: boolean;
+    /** Has password? */
+    bPassword: boolean;
+    /** Is VAC secured? */
+    bSecure: boolean;
+    /** How many bot players there currently are. */
+    botPlayers: number;
+    /** The server's game name/description. */
+    gameDesc: string;
+    /** The game folder. */
+    gameDir: string;
+    /** Server tags, separated by a comma. */
+    gameTags: string;
+    /** Current server map. */
+    map: string;
+    /** Max players on the server. */
+    maxPlayers: number;
+    /** The server name. */
+    name: string;
+    /** The latency to the server. */
+    ping: number;
+    /** How many players there currently are. */
+    players: number;
+    /** The server's game version it is running on. */
+    serverVersion: number;
+    steamID: string;
+}
+
+export interface ServerBrowserFriendServer {
+    /** The ID of the game. */
+    appid: number;
+    /** Non-Steam server? */
+    bNonSteamServer: boolean;
+    gameText: string;
+    /** The ID of the game. */
+    gameid: string;
+    steamIDLobby: string;
+}
+
+export interface ServerBrowserFavoritesAndHistory {
+    favorites: ServerBrowserServer[];
+    history: ServerBrowserServer[];
+}
+
+export interface ServerBrowserPlayerRefreshStatus {
+    bSuccess: boolean;
+    bRefreshComplete: boolean;
+}
+
+export interface ServerBrowserPlayer extends ServerBrowserPlayerRefreshStatus {
+    /** Player name. */
+    playerName: string;
+    /** Player score. */
+    score: number;
+    /** Time played on the server. */
+    timePlayed: number;
+}
+
+export interface ServerBrowserPreferences {
+    GameList: string;
+    filters: ServerBrowserTabFilters;
+}
+
+export interface ServerBrowserTabFilters {
+    favorites: ServerBrowserGameFilter;
+    friends: ServerBrowserGameFilter;
+    history: ServerBrowserGameFilter;
+    internet: ServerBrowserGameFilter;
+    lan: ServerBrowserGameFilter;
+}
+
+export interface ServerBrowserDialog {
+    dialogID: number;
+    ip: number;
+    port: number;
+    queryPort: number;
+}
+
+export interface FileDialog {
+    /** Whether to choose a directory instead. */
+    bChooseDirectory?: boolean;
+    /**
+     * Array of file filters.
+     * @example
+     * Example from the "Add a Non-Steam Game" dialog:
+     * ```
+     * [
+     *     {
+     *         strFileTypeName: LocalizationManager.LocalizeString("#AddNonSteam_Filter_Exe_Linux"),
+     *         rFilePatterns: [ "*.application", "*.exe", "*.sh", "*.AppImage" ],
+     *         bUseAsDefault: true,
+     *     },
+     *     {
+     *         strFileTypeName: LocalizationManager.LocalizeString("#AddNonSteam_Filter_All"),
+     *         rFilePatterns: [ "*" ],
+     *     }
+     * ]
+     * ```
+     */
+    rgFilters?: FileDialogFilter[];
+    /** Initially selected file. */
+    strInitialFile?: string;
+    /** Window title. */
+    strTitle?: string;
+}
+
+export interface FileDialogFilter {
+    /** A localization string for the file type. */
+    strFileTypeName: string;
+    /**
+     * File patterns.
+     * @example [ "*.application", "*.exe", "*.sh", "*.AppImage" ]
+     */
+    rFilePatterns: string[];
+    /** Whether to use this filter by default. */
+    bUseAsDefault?: boolean;
+}
+
+export interface OSEndOfLifeInfo {
+    bOSWillBeUnsupported: boolean;
+    osType: OSType;
+}
+
+export interface SteamURL {
+    url: string;
+    /**
+     * @todo enum?
+     */
+    feature: number;
+}
+
+export interface SteamURLs {
+    CommunityImages: SteamURL;
+    StoreAppImages: SteamURL;
+    BaseURLSharedCDN: SteamURL;
+    ClanAssetCDN: SteamURL;
+    CommunityCDN: SteamURL;
+    AvatarBaseURL: SteamURL;
+    StoreCDN: SteamURL;
+    WebAPI: SteamURL;
+    LocalSSA: SteamURL;
+}
+
+export interface SteamWindow {
+    appid: number;
+    hwndParent: number;
+    nBrowserID: number;
+    strAppName: string;
+    unID: number;
+    unPID: number;
+    windowType: number;
+    x: number;
+    y: number;
+}
+
+export interface TransportInfo {
+    authKeyClientdll: string;
+    authKeySteamUI: string;
+    portClientdll: number;
+    portSteamUI: number;
+}
+
+export interface FriendChatDialog {
+    browserid: number;
+    btakefocus: string;
+    command: string;
+    pid: number;
+    steamid: string;
+}
+
+export interface FriendChatDialogData {
+    data: FriendChatDialog;
+}
+
+export interface PushToTalkInfo {
+    /** Indicates whether push-to-talk is enabled. */
+    bEnabled: boolean;
+    /** Indicates whether push-to-mute is in use instead. */
+    bPushToMute: boolean;
+    /**
+     * Push-to-talk hotkey.
+     * @todo enum?
+     */
+    vkHotKey: number;
+    /** Push-to-talk hotkey name. */
+    strKeyName: string;
+}
+
+export interface NotificationOptions {
+    body: string;
+    chatroomgroupid?: number;
+    chatroomid?: number;
+    icon?: string;
+    state: string;
+    /** A Steam64 ID. */
+    steamid: string;
+    tag?: string;
+    title?: string;
+}
+
+export interface LogonInfo {
+    bLoggedOn: boolean;
+    eUniverse: SteamRealm;
+    strAccountName: string;
+    strCommunityImagesURL: string;
+    strPersonaName: string;
+    /** Steam64 ID. */
+    strSteamid: string;
+    /** Country code. */
+    strUserCountry: string;
+}
+
+export interface GameWindowInfo {
+    bCanClose: boolean;
+    strTitle: string;
+    windowid: number;
+}
+
+export interface FocusedApp {
+    appid: number;
+    pid: number;
+    windowid: number;
+    strExeName: string;
+}
+
+export interface FocusChangeEvent {
+    focusedApp: FocusedApp;
+    rgFocusable: FocusedApp[];
+}
+
 export enum AppArtworkAssetType {
     Capsule = 0,
     Hero = 1,
@@ -4200,7 +5881,7 @@ export enum AppError {
     InvalidPasscode = 54,
     SelfUpdating = 55,
     ParentalPlaytimeExceeded = 56,
-    Max = 57
+    Max = 57,
 }
 
 export enum ClientBetaState {
@@ -4268,6 +5949,378 @@ export enum BackgroundDownloadsBehavior {
     Never = 2,
 }
 
+export enum SteamRealm {
+    Unknown = 0,
+    Global = 1,
+    China = 2,
+}
+
+/**
+ * @remarks Not present in any of the Steam files, source: https://gist.github.com/Ne3tCode/fc424ae2bd723d9ccb236eeccce66316#file-steammobile_friendsui_enums-steamd-L1308-L1340
+ */
+export enum AppLaunchSource {
+    None = 0,
+    _2ftLibraryDetails = 100,
+    _2ftLibraryListView = 101,
+    _2ftLibraryGrid = 103,
+    InstallSubComplete = 104,
+    DownloadsPage = 105,
+    RemoteClientStartStreaming = 106,
+    _2ftMiniModeList = 107,
+    _10ft = 200,
+    DashAppLaunchCmdLine = 300,
+    DashGameIdLaunchCmdLine = 301,
+    RunByGameDir = 302,
+    SubCmdRunDashGame = 303,
+    SteamURL_Launch = 400,
+    SteamURL_Run = 401,
+    SteamURL_JoinLobby = 402,
+    SteamURL_RunGame = 403,
+    SteamURL_RunGameIdOrJumplist = 404,
+    SteamURL_RunSafe = 405,
+    TrayIcon = 500,
+    LibraryLeftColumnContextMenu = 600,
+    LibraryLeftColumnDoubleClick = 601,
+    Dota2Launcher = 700,
+    IRunGameEngine = 800,
+    DRMFailureResponse = 801,
+    DRMDataRequest = 802,
+    CloudFilePanel = 803,
+    DiscoveredAlreadyRunning = 804,
+    GameActionJoinParty = 900,
+    AppPortraitContextMenu = 1000,
+}
+
+export enum AppLaunchOptionType {
+    None = 0,
+    Default = 1,
+    SafeMode = 2,
+    Multiplayer = 3,
+    Config = 4,
+    OpenVR = 5,
+    Server = 6,
+    Editor = 7,
+    Manual = 8,
+    Benchmark = 9,
+    Option1 = 10,
+    Option2 = 11,
+    Option3 = 12,
+    OculusVR = 13,
+    OpenVROverlay = 14,
+    OSVR = 15,
+    OpenXR = 16,
+    Dialog = 1e3,
+}
+
+/**
+ * @remarks Not present in any of the Steam files. This is only present as localization strings, whose tokens start with `#Steam_AppUpdateError_`.
+ */
+export enum AppUpdateError {
+    None = 0,
+    Unspecified = 1,
+    Paused = 2,
+    Canceled = 3,
+    Suspended = 4,
+    NoSubscription = 5,
+    NoConnection = 6,
+    Timeout = 7,
+    MissingKey = 8,
+    MissingConfig = 9,
+    DiskReadFailure = 10,
+    DiskWriteFailure = 11,
+    NotEnoughDiskSpace = 12,
+    CorruptGameFiles = 13,
+    WaitingForNextDisk = 14,
+    InvalidInstallPath = 15,
+    AppRunning = 16,
+    DependencyFailure = 17,
+    NotInstalled = 18,
+    UpdateRequired = 19,
+    Busy = 20,
+    NoDownloadSources = 21,
+    InvalidAppConfig = 22,
+    InvalidDepotConfig = 23,
+    MissingManifest = 24,
+    NotReleased = 25,
+    RegionRestricted = 26,
+    CorruptDepotCache = 27,
+    MissingExecutable = 28,
+    InvalidPlatform = 29,
+    InvalidFileSystem = 30,
+    CorruptUpdateFiles = 31,
+    DownloadDisabled = 32,
+    SharedLibraryLocked = 33,
+    PendingLicense = 34,
+    OtherSessionPlaying = 35,
+    CorruptDownload = 36,
+    CorruptDisk = 37,
+    FilePermissions = 38,
+    FileLocked = 39,
+    MissingContent = 40,
+    Requires64BitOS = 41,
+    MissingUpdateFiles = 42,
+    NotEnoughDiskQuota = 43,
+    LockedSiteLicense = 44,
+    ParentalControlBlocked = 45,
+    CreateProcessFailure = 46,
+    SteamClientOutdated = 47,
+    PlaytimeExceeded = 48,
+    CorruptFileSignature = 49,
+    MissingInstalledFiles = 50,
+    CompatibilityToolFailure = 51,
+    UnmountedUninstallPath = 52,
+    InvalidBackupPath = 53,
+    InvalidPasscode = 54,
+    ThirdPartyUpdater = 55,
+    ParentalPlaytimeExceeded = 56,
+}
+
+export enum ClientUINotification {
+    GroupChatMessage = 1,
+    FriendChatMessage = 2,
+    FriendPersonaState = 3,
+}
+
+export enum MusicRepeatStatus {
+    None = 0,
+    All = 1,
+    Once = 2,
+    Max = 3,
+}
+
+export enum JoinServerError {
+    PingFailed = -3,
+    Connecting = -2,
+    Pinging = -1,
+    None = 0,
+    VACBanned = 1,
+    ServerFull = 2,
+    ModNotInstalled = 3,
+    AppNotFound = 4,
+    NotInitialized = 5,
+}
+
+export enum ServerBrowserGameFilterAntiCheat {
+    All = 0,
+    Secure = 1,
+    NotSecure = 2,
+}
+
+export enum ServerBrowserGameFilterPing {
+    All = 0,
+    LessThan50 = 50,
+    LessThan100 = 100,
+    LessThan150 = 150,
+    LessThan250 = 250,
+}
+
+export enum UIMode {
+    Unknown = -1,
+    GamePad = 4,
+    Desktop = 7,
+}
+
+export enum WindowBringToFront {
+    Invalid = 0,
+    ForceOS = 1,
+    WithoutForcingOS = 2,
+}
+
+export enum ComputerActiveState {
+    Invalid = 0,
+    Active = 1,
+    Idle = 2,
+}
+
+export enum ClientUsedInputType {
+    Keyboard = 0,
+    Mouse = 1,
+    Controller = 2,
+    Max = 3,
+}
+
+export enum TouchGestureType {
+    None = 0,
+    Touch = 1,
+    Tap = 2,
+    DoubleTap = 3,
+    ShortPress = 4,
+    LongPress = 5,
+    LongTap = 6,
+    TwoFingerTap = 7,
+    TapCancelled = 8,
+    PinchBegin = 9,
+    PinchUpdate = 10,
+    PinchEnd = 11,
+    FlingStart = 12,
+    FlingCancelled = 13,
+}
+
+export enum BrowserViewContextMenuCommand {
+    Close = -1,
+    OpenDevTools = 26500,
+    CloseDevTools = 26501,
+    InspectElement = 26502,
+    OpenLinkInNewTab = 26503,
+}
+
+export enum BrowserViewContextMenuTypeFlag {
+    None = 0,
+    Page = 1 << 0,
+    Frame = 1 << 1,
+    Link = 1 << 2,
+    Media = 1 << 3,
+    Selection = 1 << 4,
+    Editable = 1 << 5,
+}
+
+export enum BrowserViewContextMenuEditFlag {
+    None = 0,
+    CanUndo = 1 << 0,
+    CanRedo = 1 << 1,
+    CanCut = 1 << 2,
+    CanCopy = 1 << 3,
+    CanPaste = 1 << 4,
+    CanDelete = 1 << 5,
+    CanSelectAll = 1 << 6,
+    CanTranslate = 1 << 7,
+}
+
+export enum Result {
+    OK = 1,
+    Fail = 2,
+    NoConnection = 3,
+    InvalidPassword = 5,
+    LoggedInElsewhere = 6,
+    InvalidProtocolVer = 7,
+    InvalidParam = 8,
+    FileNotFound = 9,
+    Busy = 10,
+    InvalidState = 11,
+    InvalidName = 12,
+    InvalidEmail = 13,
+    DuplicateName = 14,
+    AccessDenied = 15,
+    Timeout = 16,
+    Banned = 17,
+    AccountNotFound = 18,
+    InvalidSteamID = 19,
+    ServiceUnavailable = 20,
+    NotLoggedOn = 21,
+    Pending = 22,
+    EncryptionFailure = 23,
+    InsufficientPrivilege = 24,
+    LimitExceeded = 25,
+    Revoked = 26,
+    Expired = 27,
+    AlreadyRedeemed = 28,
+    DuplicateRequest = 29,
+    AlreadyOwned = 30,
+    IPNotFound = 31,
+    PersistFailed = 32,
+    LockingFailed = 33,
+    LogonSessionReplaced = 34,
+    ConnectFailed = 35,
+    HandshakeFailed = 36,
+    IOFailure = 37,
+    RemoteDisconnect = 38,
+    ShoppingCartNotFound = 39,
+    Blocked = 40,
+    Ignored = 41,
+    NoMatch = 42,
+    AccountDisabled = 43,
+    ServiceReadOnly = 44,
+    AccountNotFeatured = 45,
+    AdministratorOK = 46,
+    ContentVersion = 47,
+    TryAnotherCM = 48,
+    PasswordRequiredToKickSession = 49,
+    AlreadyLoggedInElsewhere = 50,
+    Suspended = 51,
+    Cancelled = 52,
+    DataCorruption = 53,
+    DiskFull = 54,
+    RemoteCallFailed = 55,
+    PasswordUnset = 56,
+    ExternalAccountUnlinked = 57,
+    PSNTicketInvalid = 58,
+    ExternalAccountAlreadyLinked = 59,
+    RemoteFileConflict = 60,
+    IllegalPassword = 61,
+    SameAsPreviousValue = 62,
+    AccountLogonDenied = 63,
+    CannotUseOldPassword = 64,
+    InvalidLoginAuthCode = 65,
+    AccountLogonDeniedNoMail = 66,
+    HardwareNotCapableOfIPT = 67,
+    IPTInitError = 68,
+    ParentalControlRestricted = 69,
+    FacebookQueryError = 70,
+    ExpiredLoginAuthCode = 71,
+    IPLoginRestrictionFailed = 72,
+    AccountLockedDown = 73,
+    AccountLogonDeniedVerifiedEmailRequired = 74,
+    NoMatchingURL = 75,
+    BadResponse = 76,
+    RequirePasswordReEntry = 77,
+    ValueOutOfRange = 78,
+    UnexpectedError = 79,
+    Disabled = 80,
+    InvalidCEGSubmission = 81,
+    RestrictedDevice = 82,
+    RegionLocked = 83,
+    RateLimitExceeded = 84,
+    AccountLoginDeniedNeedTwoFactor = 85,
+    ItemDeleted = 86,
+    AccountLoginDeniedThrottle = 87,
+    TwoFactorCodeMismatch = 88,
+    TwoFactorActivationCodeMismatch = 89,
+    AccountAssociatedToMultiplePartners = 90,
+    NotModified = 91,
+    NoMobileDevice = 92,
+    TimeNotSynced = 93,
+    SmsCodeFailed = 94,
+    AccountLimitExceeded = 95,
+    AccountActivityLimitExceeded = 96,
+    PhoneActivityLimitExceeded = 97,
+    RefundToWallet = 98,
+    EmailSendFailure = 99,
+    NotSettled = 100,
+    NeedCaptcha = 101,
+    GSLTDenied = 102,
+    GSOwnerDenied = 103,
+    InvalidItemType = 104,
+    IPBanned = 105,
+    GSLTExpired = 106,
+    InsufficientFunds = 107,
+    TooManyPending = 108,
+    NoSiteLicensesFound = 109,
+    WGNetworkSendExceeded = 110,
+    AccountNotFriends = 111,
+    LimitedUserAccount = 112,
+}
+
+/**
+ * @todo May be useful for ParentalSettings.feature ?
+ */
+export enum ParentalFeature {
+    Invalid = 0,
+    Store = 1,
+    Community = 2,
+    Profile = 3,
+    Friends = 4,
+    News = 5,
+    Trading = 6,
+    Settings = 7,
+    Console = 8,
+    Browser = 9,
+    ParentalSetup = 10,
+    Library = 11,
+    Test = 12,
+    SiteLicense = 13,
+    KioskMode = 14,
+    Max = 15,
+}
 
 export interface Unregisterable {
     /**
