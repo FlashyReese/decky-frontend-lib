@@ -193,12 +193,12 @@ export interface BrowserContext {
   m_eUIMode?: EUIMode;
 
   /**
-   * @todo Appears when {@link m_eBrowserType} == 0 ?
+   * Game ID associated with off-screen/shared contexts, when present.
    */
   m_gameID?: string;
 
   /**
-   * @todo Same as `SteamClient.Browser.GetBrowserID()` ?
+   * Browser ID associated with this context.
    */
   m_nBrowserID: number;
 
